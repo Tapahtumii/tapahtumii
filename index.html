@@ -3,7 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Tahtumii — tapahtumat lähellä sinua</title>
+    <title>Tapahtumii — tapahtumat lähellä sinua</title>
+    <meta name="description" content="Löydä tapahtumat lähellä sinua. Konsertit, urheilu, kulttuuri ja lastentapahtumat Helsingissä, Tampereella, Turussa ja Oulussa." />
+    <meta name="keywords" content="tapahtumat, konsertit, urheilu, kulttuuri, Helsinki, Tampere, Turku, Oulu, liput, musiikki, teatteri, jääkiekko" />
+    <meta property="og:title" content="Tapahtumii — tapahtumat lähellä sinua" />
+    <meta property="og:description" content="Löydä kaikki tapahtumat yhdestä paikasta. Musiikki, urheilu, kulttuuri ja lastentapahtumat." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tapahtumii.com" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Tapahtumii — tapahtumat lähellä sinua" />
+    <meta name="twitter:description" content="Löydä kaikki tapahtumat yhdestä paikasta." />
+    <link rel="canonical" href="https://tapahtumii.com" />
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Tapahtumii",
+        "url": "https://tapahtumii.com",
+        "description": "Löydä tapahtumat lähellä sinua — konsertit, urheilu, kulttuuri ja lastentapahtumat Suomessa.",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://tapahtumii.com/?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -223,7 +247,7 @@
             'Oulu': 'https://api.ouka.fi/linkedevents/v1/event/',
         };
 
-        // YSO-avainsanat → Tahtumii-kategoriat
+        // YSO-avainsanat → Tapahtumii-kategoriat
         const YSO_CATEGORY_MAP = {
             // Musiikki
             'yso:p1808': { cat: 'Musiikki', sub: 'Musiikki' },    // musiikki
@@ -295,7 +319,7 @@
             return { cat: 'Kulttuuri', sub: 'Kulttuuri' };
         };
 
-        // Linked Events → Tahtumii event -muunnos
+        // Linked Events → Tapahtumii event -muunnos
         const parseLinkedEvent = (ev, city, idOffset) => {
             const name = ev.name?.fi || ev.name?.en || ev.name?.sv || '';
             const desc = ev.short_description?.fi || ev.description?.fi || '';
@@ -415,7 +439,7 @@
                     .map(ev => parseLinkedEvent(ev, city, idOffset))
                     .filter(Boolean);
             } catch (err) {
-                console.warn(`[Tahtumii] ${city} API-haku epäonnistui:`, err.message);
+                console.warn(`[Tapahtumii] ${city} API-haku epäonnistui:`, err.message);
                 return [];
             }
         };
@@ -452,7 +476,7 @@
                     };
                 }).filter(Boolean);
             } catch (err) {
-                console.warn('[Tahtumii] Tampere API-haku epäonnistui:', err.message);
+                console.warn('[Tapahtumii] Tampere API-haku epäonnistui:', err.message);
                 return [];
             }
         };
@@ -467,7 +491,7 @@
             ]);
             
             const all = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
-            console.log(`[Tahtumii] Haettu ${all.length} tapahtumaa live-rajapinnoista`);
+            console.log(`[Tapahtumii] Haettu ${all.length} tapahtumaa live-rajapinnoista`);
             return all;
         };
 
@@ -1136,7 +1160,7 @@
                         {/* Logo keskellä */}
                         <div onClick={scrollToToday} style={{ cursor: 'pointer', textAlign: 'center' }}>
                             <div style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 50%, #F59E0B 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                                tahtumii.com
+                                tapahtumii.com
                             </div>
                             {isLoading && (
                                 <div style={{ fontSize: '0.55rem', opacity: 0.5, letterSpacing: '1px' }}>Haetaan tapahtumia...</div>
