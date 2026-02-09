@@ -33,7 +33,7 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
@@ -1017,7 +1017,14 @@
         // ============================================================
         const SUPABASE_URL = 'https://datrllrahxwlygnzlnrr.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_OSqZUxwDIm-6gT68WlPP4w_qy3nYQNl';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let supabaseClient;
+        try {
+            supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+        } catch(e) {
+            console.warn('[Tapahtumii] Supabase ei latautunut:', e);
+            supabaseClient = null;
+        }
+        const sb = supabaseClient;
 
         // ============================================================
         // KIRJAUTUMIS-MODAALI
@@ -1036,7 +1043,7 @@
             const handleLogin = async (e) => {
                 e.preventDefault();
                 setError(''); setLoading(true);
-                const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+                const { data, error: err } = await sb.auth.signInWithPassword({ email, password });
                 setLoading(false);
                 if (err) { setError(err.message); return; }
                 onAuth(data.user);
@@ -1046,7 +1053,7 @@
             const handleRegister = async (e) => {
                 e.preventDefault();
                 setError(''); setLoading(true);
-                const { data, error: err } = await supabase.auth.signUp({
+                const { data, error: err } = await sb.auth.signUp({
                     email, password,
                     options: { data: { full_name: displayName } }
                 });
@@ -1058,7 +1065,7 @@
             const handleMagicLink = async (e) => {
                 e.preventDefault();
                 setError(''); setLoading(true);
-                const { error: err } = await supabase.auth.signInWithOtp({ email });
+                const { error: err } = await sb.auth.signInWithOtp({ email });
                 setLoading(false);
                 if (err) { setError(err.message); return; }
                 setMessage('Kirjautumislinkki lähetetty sähköpostiisi!');
@@ -1145,7 +1152,7 @@
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 setError(''); setLoading(true);
-                const { data, error: err } = await supabase.from('events').insert({
+                const { data, error: err } = await sb.from('events').insert({
                     ...form, source: 'user', status: 'pending', created_by: user.id
                 }).select();
                 setLoading(false);
@@ -1257,13 +1264,13 @@
 
             const loadPending = async () => {
                 setLoading(true);
-                const { data } = await supabase.from('events').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+                const { data } = await sb.from('events').select('*').eq('status', 'pending').order('created_at', { ascending: false });
                 setPendingEvents(data || []);
                 setLoading(false);
             };
 
             const handleModerate = async (id, newStatus) => {
-                await supabase.from('events').update({ status: newStatus, approved_by: (await supabase.auth.getUser()).data.user?.id }).eq('id', id);
+                await sb.from('events').update({ status: newStatus, approved_by: (await sb.auth.getUser()).data.user?.id }).eq('id', id);
                 loadPending();
             };
 
@@ -1326,13 +1333,14 @@
 
             // Supabase auth session
             useEffect(() => {
-                supabase.auth.getSession().then(({ data: { session } }) => {
+                if (!sb) return;
+                sb.auth.getSession().then(({ data: { session } }) => {
                     if (session?.user) {
                         setUser(session.user);
                         loadProfile(session.user.id);
                     }
                 });
-                const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+                const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
                     if (session?.user) {
                         setUser(session.user);
                         loadProfile(session.user.id);
@@ -1345,12 +1353,13 @@
             }, []);
 
             const loadProfile = async (userId) => {
-                const { data } = await supabase.from('user_profiles').select('*').eq('id', userId).single();
+                const { data } = await sb.from('user_profiles').select('*').eq('id', userId).single();
                 if (data) setUserProfile(data);
             };
 
             // Hae tapahtumat tietokannasta
             useEffect(() => {
+                if (!sb) return;
                 const fetchDbEvents = async () => {
                     const today = new Date().toISOString().split('T')[0];
                     const { data } = await supabase
@@ -1386,7 +1395,7 @@
             }, [events, dbEvents]);
 
             const handleLogout = async () => {
-                await supabase.auth.signOut();
+                await sb.auth.signOut();
                 setUser(null);
                 setUserProfile(null);
             };
