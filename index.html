@@ -1376,22 +1376,29 @@
             }, []);
 
             const loadProfile = async (userId) => {
-                const { data } = await sb.from('user_profiles').select('*').eq('id', userId).single();
-                if (data) setUserProfile(data);
+                try {
+                    const { data, error } = await sb.from('user_profiles').select('*').eq('id', userId).single();
+                    if (error) { console.warn('[Tapahtumii] Profiili:', error.message); return; }
+                    if (data) setUserProfile(data);
+                } catch(e) { console.warn('[Tapahtumii] Profiili:', e); }
             };
 
-            // Hae Supabase-tapahtumat, demo fallbackina
+            // Hae Supabase-tapahtumat taustalla (ei korvaa demoa jos virhe)
             useEffect(() => {
                 if (!sb) return;
                 const fetchDbEvents = async () => {
                     try {
                         const today = new Date().toISOString().split('T')[0];
-                        const { data } = await sb
+                        const { data, error } = await sb
                             .from('events')
                             .select('*')
                             .gte('start_date', today)
                             .in('status', ['approved', 'auto_approved'])
                             .order('start_date', { ascending: true });
+                        if (error) {
+                            console.warn('[Tapahtumii] Supabase virhe:', error.message);
+                            return; // Älä koske demoon
+                        }
                         if (data && data.length > 0) {
                             const mapped = data.map(e => ({
                                 id: 'db-' + e.id,
@@ -1406,19 +1413,11 @@
                                 ticketUrl: e.ticket_url,
                                 eventUrl: e.event_url,
                             }));
-                            // Yhdistä demo + db (db korvaa samannimiset)
-                            setEvents(prev => {
-                                const merged = [...mapped];
-                                prev.forEach(de => {
-                                    if (!mapped.find(db => db.title === de.title && db.date === de.date)) {
-                                        merged.push(de);
-                                    }
-                                });
-                                return merged;
-                            });
+                            setEvents(prev => [...prev, ...mapped]);
                         }
                     } catch(e) {
                         console.warn('[Tapahtumii] Supabase-haku:', e);
+                        // Virhe → pidetään demo-data
                     }
                 };
                 fetchDbEvents();
