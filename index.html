@@ -1380,49 +1380,48 @@
                 if (data) setUserProfile(data);
             };
 
-            // Hae live-data taustalla (korvaa demon jos onnistuu)
+            // Hae Supabase-tapahtumat, demo fallbackina
             useEffect(() => {
-                const loadLive = async () => {
-                    let liveEvents = [];
+                if (!sb) return;
+                const fetchDbEvents = async () => {
                     try {
-                        const apiEvents = await fetchAllEvents();
-                        if (apiEvents.length > 0) liveEvents = apiEvents;
-                    } catch(e) {}
-
-                    if (sb) {
-                        try {
-                            const today = new Date().toISOString().split('T')[0];
-                            const { data } = await sb
-                                .from('events')
-                                .select('*')
-                                .gte('start_date', today)
-                                .in('status', ['approved', 'auto_approved'])
-                                .order('start_date', { ascending: true });
-                            if (data && data.length > 0) {
-                                const mapped = data.map(e => ({
-                                    id: 'db-' + e.id,
-                                    title: e.title,
-                                    city: e.city,
-                                    category: e.category,
-                                    subcategory: e.subcategory,
-                                    date: e.start_date,
-                                    time: e.start_time || '',
-                                    venue: e.venue || '',
-                                    price: e.price || '',
-                                    ticketUrl: e.ticket_url,
-                                    eventUrl: e.event_url,
-                                }));
-                                liveEvents = [...liveEvents, ...mapped];
-                            }
-                        } catch(e) {}
-                    }
-
-                    if (liveEvents.length > 0) {
-                        console.log(`[Tapahtumii] ${liveEvents.length} live-tapahtumaa`);
-                        setEvents(liveEvents);
+                        const today = new Date().toISOString().split('T')[0];
+                        const { data } = await sb
+                            .from('events')
+                            .select('*')
+                            .gte('start_date', today)
+                            .in('status', ['approved', 'auto_approved'])
+                            .order('start_date', { ascending: true });
+                        if (data && data.length > 0) {
+                            const mapped = data.map(e => ({
+                                id: 'db-' + e.id,
+                                title: e.title,
+                                city: e.city,
+                                category: e.category,
+                                subcategory: e.subcategory,
+                                date: e.start_date,
+                                time: e.start_time || '',
+                                venue: e.venue || '',
+                                price: e.price || '',
+                                ticketUrl: e.ticket_url,
+                                eventUrl: e.event_url,
+                            }));
+                            // Yhdistä demo + db (db korvaa samannimiset)
+                            setEvents(prev => {
+                                const merged = [...mapped];
+                                prev.forEach(de => {
+                                    if (!mapped.find(db => db.title === de.title && db.date === de.date)) {
+                                        merged.push(de);
+                                    }
+                                });
+                                return merged;
+                            });
+                        }
+                    } catch(e) {
+                        console.warn('[Tapahtumii] Supabase-haku:', e);
                     }
                 };
-                loadLive();
+                fetchDbEvents();
             }, []);
 
             const allEvents = events;
