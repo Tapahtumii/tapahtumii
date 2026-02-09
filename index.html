@@ -33,6 +33,7 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
@@ -1012,6 +1013,294 @@
         };
 
         // ============================================================
+        // SUPABASE-YHTEYS
+        // ============================================================
+        const SUPABASE_URL = 'https://datrllrahxwlygnzlnrr.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_OSqZUxwDIm-6gT68WlPP4w_qy3nYQNl';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ============================================================
+        // KIRJAUTUMIS-MODAALI
+        // ============================================================
+        const AuthModal = ({ isOpen, onClose, onAuth }) => {
+            const [mode, setMode] = useState('login'); // login, register, magic
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [displayName, setDisplayName] = useState('');
+            const [error, setError] = useState('');
+            const [message, setMessage] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            if (!isOpen) return null;
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setError(''); setLoading(true);
+                const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+                setLoading(false);
+                if (err) { setError(err.message); return; }
+                onAuth(data.user);
+                onClose();
+            };
+
+            const handleRegister = async (e) => {
+                e.preventDefault();
+                setError(''); setLoading(true);
+                const { data, error: err } = await supabase.auth.signUp({
+                    email, password,
+                    options: { data: { full_name: displayName } }
+                });
+                setLoading(false);
+                if (err) { setError(err.message); return; }
+                setMessage('Tarkista sähköpostisi ja vahvista tili!');
+            };
+
+            const handleMagicLink = async (e) => {
+                e.preventDefault();
+                setError(''); setLoading(true);
+                const { error: err } = await supabase.auth.signInWithOtp({ email });
+                setLoading(false);
+                if (err) { setError(err.message); return; }
+                setMessage('Kirjautumislinkki lähetetty sähköpostiisi!');
+            };
+
+            const inputStyle = {
+                width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px',
+                color: '#fff', fontSize: '0.9rem', fontFamily: 'Outfit', outline: 'none',
+            };
+            const btnStyle = {
+                width: '100%', padding: '12px', background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 100%)',
+                border: 'none', borderRadius: '12px', color: '#fff', fontSize: '0.9rem',
+                fontWeight: 600, cursor: 'pointer', fontFamily: 'Outfit',
+                opacity: loading ? 0.6 : 1,
+            };
+
+            return (
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+                    onClick={onClose}>
+                    <div style={{ background: '#1a1a2e', borderRadius: '20px', padding: '28px', maxWidth: '360px', width: '100%', border: '1px solid rgba(255,255,255,0.1)' }}
+                        onClick={e => e.stopPropagation()}>
+                        <h2 style={{ fontSize: '1.3rem', fontWeight: 700, marginBottom: '20px', textAlign: 'center' }}>
+                            {mode === 'login' ? 'Kirjaudu sisään' : mode === 'register' ? 'Luo tili' : 'Kirjaudu linkillä'}
+                        </h2>
+
+                        {error && <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '0.8rem', color: '#f87171' }}>{error}</div>}
+                        {message && <div style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '0.8rem', color: '#4ade80' }}>{message}</div>}
+
+                        <form onSubmit={mode === 'login' ? handleLogin : mode === 'register' ? handleRegister : handleMagicLink} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {mode === 'register' && (
+                                <input type="text" placeholder="Nimi" value={displayName} onChange={e => setDisplayName(e.target.value)} style={inputStyle} required />
+                            )}
+                            <input type="email" placeholder="Sähköposti" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} required />
+                            {mode !== 'magic' && (
+                                <input type="password" placeholder="Salasana" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} required minLength={6} />
+                            )}
+                            <button type="submit" disabled={loading} style={btnStyle}>
+                                {loading ? '...' : mode === 'login' ? 'Kirjaudu' : mode === 'register' ? 'Luo tili' : 'Lähetä linkki'}
+                            </button>
+                        </form>
+
+                        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center', fontSize: '0.8rem' }}>
+                            {mode === 'login' && (
+                                <>
+                                    <span style={{ opacity: 0.5, cursor: 'pointer' }} onClick={() => { setMode('magic'); setError(''); setMessage(''); }}>Kirjaudu ilman salasanaa →</span>
+                                    <span style={{ opacity: 0.5, cursor: 'pointer' }} onClick={() => { setMode('register'); setError(''); setMessage(''); }}>Ei tiliä? Luo tili →</span>
+                                </>
+                            )}
+                            {mode === 'register' && (
+                                <span style={{ opacity: 0.5, cursor: 'pointer' }} onClick={() => { setMode('login'); setError(''); setMessage(''); }}>Onko jo tili? Kirjaudu →</span>
+                            )}
+                            {mode === 'magic' && (
+                                <span style={{ opacity: 0.5, cursor: 'pointer' }} onClick={() => { setMode('login'); setError(''); setMessage(''); }}>← Kirjaudu salasanalla</span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================================
+        // TAPAHTUMAN LISÄYS -MODAALI
+        // ============================================================
+        const AddEventModal = ({ isOpen, onClose, user, onEventAdded }) => {
+            const [form, setForm] = useState({
+                title: '', description: '', city: 'Helsinki', venue: '',
+                category: 'Musiikki', subcategory: '', start_date: '', start_time: '',
+                price: '', ticket_url: '', event_url: ''
+            });
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const [success, setSuccess] = useState('');
+
+            const subcategories = {
+                'Musiikki': ['Jazz', 'Klassinen', 'Rock', 'Pop', 'Rap', 'Heavy', 'Elektroninen', 'Blues', 'Folk', 'Iskelmä'],
+                'Urheilu': ['Jääkiekko', 'Jalkapallo', 'Koripallo', 'Lentopallo', 'Tennis', 'Yleisurheilu'],
+                'Kulttuuri': ['Ooppera', 'Teatteri', 'Komedia', 'Elokuva', 'Näyttely', 'Tanssi', 'Museo', 'Sirkus', 'Kirjallisuus'],
+                'Lapset': ['Näytös', 'Museo', 'Sirkus', 'Teatteri']
+            };
+
+            if (!isOpen) return null;
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError(''); setLoading(true);
+                const { data, error: err } = await supabase.from('events').insert({
+                    ...form, source: 'user', status: 'pending', created_by: user.id
+                }).select();
+                setLoading(false);
+                if (err) { setError(err.message); return; }
+                setSuccess('Tapahtuma lähetetty tarkistettavaksi!');
+                if (onEventAdded) onEventAdded(data[0]);
+                setTimeout(() => { onClose(); setSuccess(''); setForm({ title: '', description: '', city: 'Helsinki', venue: '', category: 'Musiikki', subcategory: '', start_date: '', start_time: '', price: '', ticket_url: '', event_url: '' }); }, 1500);
+            };
+
+            const inputStyle = {
+                width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px',
+                color: '#fff', fontSize: '0.85rem', fontFamily: 'Outfit', outline: 'none',
+            };
+            const selectStyle = { ...inputStyle, appearance: 'none', WebkitAppearance: 'none' };
+
+            return (
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+                    onClick={onClose}>
+                    <div className="scrollbar-hide" style={{ background: '#1a1a2e', borderRadius: '20px', padding: '24px', maxWidth: '400px', width: '100%', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '85vh', overflowY: 'auto' }}
+                        onClick={e => e.stopPropagation()}>
+                        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '16px', textAlign: 'center' }}>Lisää tapahtuma</h2>
+
+                        {error && <div style={{ background: 'rgba(239,68,68,0.15)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', fontSize: '0.8rem', color: '#f87171' }}>{error}</div>}
+                        {success && <div style={{ background: 'rgba(34,197,94,0.15)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', fontSize: '0.8rem', color: '#4ade80' }}>{success}</div>}
+
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <input type="text" placeholder="Tapahtuman nimi *" value={form.title} onChange={e => setForm({...form, title: e.target.value})} style={inputStyle} required />
+                            <textarea placeholder="Kuvaus" value={form.description} onChange={e => setForm({...form, description: e.target.value})} style={{...inputStyle, minHeight: '60px', resize: 'vertical'}} />
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <select value={form.city} onChange={e => setForm({...form, city: e.target.value})} style={selectStyle}>
+                                    {['Helsinki', 'Tampere', 'Turku', 'Oulu'].map(c => <option key={c} value={c} style={{background: '#1a1a2e'}}>{c}</option>)}
+                                </select>
+                                <input type="text" placeholder="Paikka" value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} style={inputStyle} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <select value={form.category} onChange={e => setForm({...form, category: e.target.value, subcategory: ''})} style={selectStyle}>
+                                    {['Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'].map(c => <option key={c} value={c} style={{background: '#1a1a2e'}}>{c}</option>)}
+                                </select>
+                                <select value={form.subcategory} onChange={e => setForm({...form, subcategory: e.target.value})} style={selectStyle}>
+                                    <option value="" style={{background: '#1a1a2e'}}>Alakategoria</option>
+                                    {(subcategories[form.category] || []).map(s => <option key={s} value={s} style={{background: '#1a1a2e'}}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <input type="date" value={form.start_date} onChange={e => setForm({...form, start_date: e.target.value})} style={inputStyle} required />
+                                <input type="time" value={form.start_time} onChange={e => setForm({...form, start_time: e.target.value})} style={inputStyle} />
+                            </div>
+                            <input type="text" placeholder="Hinta (esim. 25€, Ilmainen)" value={form.price} onChange={e => setForm({...form, price: e.target.value})} style={inputStyle} />
+                            <input type="url" placeholder="Lipunmyynti URL" value={form.ticket_url} onChange={e => setForm({...form, ticket_url: e.target.value})} style={inputStyle} />
+                            <input type="url" placeholder="Tapahtuman URL" value={form.event_url} onChange={e => setForm({...form, event_url: e.target.value})} style={inputStyle} />
+                            <button type="submit" disabled={loading} style={{
+                                width: '100%', padding: '12px', background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 100%)',
+                                border: 'none', borderRadius: '12px', color: '#fff', fontSize: '0.9rem',
+                                fontWeight: 600, cursor: 'pointer', fontFamily: 'Outfit', marginTop: '4px',
+                                opacity: loading ? 0.6 : 1,
+                            }}>
+                                {loading ? 'Lähetetään...' : 'Lähetä tarkistettavaksi'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================================
+        // KÄYTTÄJÄVALIKKO
+        // ============================================================
+        const UserMenu = ({ user, profile, onLogout, onShowAdmin }) => {
+            const [open, setOpen] = useState(false);
+            if (!open) return (
+                <button onClick={() => setOpen(true)} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg, #A78BFA, #EC4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>
+                        {(profile?.display_name || user.email)?.[0]?.toUpperCase() || '?'}
+                    </div>
+                </button>
+            );
+
+            return (
+                <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 998 }} onClick={() => setOpen(false)} />
+                    <div style={{ position: 'absolute', right: '16px', top: '48px', background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', minWidth: '180px', zIndex: 999 }}>
+                        <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '8px' }}>{user.email}</div>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.4, marginBottom: '10px' }}>Rooli: {profile?.role || 'user'}</div>
+                        {profile?.role === 'admin' && (
+                            <button onClick={() => { onShowAdmin(); setOpen(false); }} style={{ width: '100%', padding: '8px', background: 'rgba(167,139,250,0.2)', border: '1px solid rgba(167,139,250,0.3)', borderRadius: '8px', color: '#A78BFA', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'Outfit', marginBottom: '6px' }}>
+                                Moderoi tapahtumia
+                            </button>
+                        )}
+                        <button onClick={() => { onLogout(); setOpen(false); }} style={{ width: '100%', padding: '8px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', color: '#f87171', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'Outfit' }}>
+                            Kirjaudu ulos
+                        </button>
+                    </div>
+                </>
+            );
+        };
+
+        // ============================================================
+        // MODEROINTI-NÄKYMÄ (Admin)
+        // ============================================================
+        const AdminPanel = ({ isOpen, onClose }) => {
+            const [pendingEvents, setPendingEvents] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                if (!isOpen) return;
+                loadPending();
+            }, [isOpen]);
+
+            const loadPending = async () => {
+                setLoading(true);
+                const { data } = await supabase.from('events').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+                setPendingEvents(data || []);
+                setLoading(false);
+            };
+
+            const handleModerate = async (id, newStatus) => {
+                await supabase.from('events').update({ status: newStatus, approved_by: (await supabase.auth.getUser()).data.user?.id }).eq('id', id);
+                loadPending();
+            };
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+                    onClick={onClose}>
+                    <div className="scrollbar-hide" style={{ background: '#1a1a2e', borderRadius: '20px', padding: '24px', maxWidth: '500px', width: '100%', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '85vh', overflowY: 'auto' }}
+                        onClick={e => e.stopPropagation()}>
+                        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '16px' }}>Moderointijono ({pendingEvents.length})</h2>
+
+                        {loading ? <div style={{ opacity: 0.5 }}>Ladataan...</div> : pendingEvents.length === 0 ? (
+                            <div style={{ opacity: 0.5, textAlign: 'center', padding: '20px' }}>Ei odottavia tapahtumia ✓</div>
+                        ) : pendingEvents.map(ev => (
+                            <div key={ev.id} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '14px', marginBottom: '10px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>{ev.title}</div>
+                                <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '8px' }}>
+                                    {ev.city} · {ev.category} · {ev.start_date} {ev.start_time} · {ev.venue || '—'}
+                                </div>
+                                {ev.description && <div style={{ fontSize: '0.75rem', opacity: 0.5, marginBottom: '8px' }}>{ev.description.substring(0, 100)}</div>}
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button onClick={() => handleModerate(ev.id, 'approved')} style={{ flex: 1, padding: '8px', background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', color: '#4ade80', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'Outfit' }}>
+                                        ✓ Hyväksy
+                                    </button>
+                                    <button onClick={() => handleModerate(ev.id, 'rejected')} style={{ flex: 1, padding: '8px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', color: '#f87171', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'Outfit' }}>
+                                        ✗ Hylkää
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================================
         // PÄÄ-KOMPONENTTI
         // ============================================================
         const Tahtumii = () => {
@@ -1019,13 +1308,88 @@
             const [selectedCategory, setSelectedCategory] = useState('Kaikki');
             const [expandedEvent, setExpandedEvent] = useState(null);
             const [currentScrollDate, setCurrentScrollDate] = useState(null);
-            const [events] = useState(() => generateDemoEvents());
+            const [events, setEvents] = useState(() => generateDemoEvents());
+            const [dbEvents, setDbEvents] = useState([]);
             const isLoading = false;
+
+            // Auth state
+            const [user, setUser] = useState(null);
+            const [userProfile, setUserProfile] = useState(null);
+            const [showAuth, setShowAuth] = useState(false);
+            const [showAddEvent, setShowAddEvent] = useState(false);
+            const [showAdmin, setShowAdmin] = useState(false);
 
             const mainScrollRef = useRef(null);
             const cityScrollRef = useRef(null);
             const categoryScrollRef = useRef(null);
             const preventScrollDateUpdate = useRef(false);
+
+            // Supabase auth session
+            useEffect(() => {
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session?.user) {
+                        setUser(session.user);
+                        loadProfile(session.user.id);
+                    }
+                });
+                const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+                    if (session?.user) {
+                        setUser(session.user);
+                        loadProfile(session.user.id);
+                    } else {
+                        setUser(null);
+                        setUserProfile(null);
+                    }
+                });
+                return () => subscription.unsubscribe();
+            }, []);
+
+            const loadProfile = async (userId) => {
+                const { data } = await supabase.from('user_profiles').select('*').eq('id', userId).single();
+                if (data) setUserProfile(data);
+            };
+
+            // Hae tapahtumat tietokannasta
+            useEffect(() => {
+                const fetchDbEvents = async () => {
+                    const today = new Date().toISOString().split('T')[0];
+                    const { data } = await supabase
+                        .from('events')
+                        .select('*')
+                        .gte('start_date', today)
+                        .in('status', ['approved', 'auto_approved'])
+                        .order('start_date', { ascending: true });
+                    if (data && data.length > 0) {
+                        const mapped = data.map(e => ({
+                            id: e.id,
+                            title: e.title,
+                            city: e.city,
+                            category: e.category,
+                            subcategory: e.subcategory,
+                            date: e.start_date,
+                            time: e.start_time || '',
+                            venue: e.venue || '',
+                            price: e.price || '',
+                            ticket_url: e.ticket_url,
+                            event_url: e.event_url,
+                        }));
+                        setDbEvents(mapped);
+                    }
+                };
+                fetchDbEvents();
+            }, []);
+
+            // Yhdistä demo + db tapahtumat (db tapahtumat ylikirjoittavat)
+            const allEvents = useMemo(() => {
+                if (dbEvents.length > 0) return [...dbEvents, ...events.filter(de => !dbEvents.find(db => db.title === de.title && db.date === de.date))];
+                return events;
+            }, [events, dbEvents]);
+
+            const handleLogout = async () => {
+                await supabase.auth.signOut();
+                setUser(null);
+                setUserProfile(null);
+            };
 
             const cities = ['Helsinki', 'Tampere', 'Turku', 'Oulu'];
             const categories = ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'];
@@ -1036,11 +1400,11 @@
             };
 
             const filteredEvents = useMemo(() => {
-                return events
+                return allEvents
                     .filter(e => e.city === selectedCity)
                     .filter(e => selectedCategory === 'Kaikki' || e.category === selectedCategory)
                     .sort((a, b) => new Date(a.date) - new Date(b.date));
-            }, [events, selectedCity, selectedCategory]);
+            }, [allEvents, selectedCity, selectedCategory]);
 
             const calendarDays = useMemo(() => {
                 const today = new Date();
@@ -1168,9 +1532,13 @@
                         </div>
 
                         {/* Käyttäjä-ikoni oikealle */}
-                        <button style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                            <UserIcon className="w-4 h-4 text-white/70" />
-                        </button>
+                        {user ? (
+                            <UserMenu user={user} profile={userProfile} onLogout={handleLogout} onShowAdmin={() => setShowAdmin(true)} />
+                        ) : (
+                            <button onClick={() => setShowAuth(true)} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                <UserIcon className="w-4 h-4 text-white/70" />
+                            </button>
+                        )}
                     </div>
 
                     {/* ====== PÄÄSISÄLTÖ ====== */}
@@ -1256,7 +1624,7 @@
                                             <div className={`timeline-dot ${isActive ? 'active' : ''}`} style={{ fontSize: '1rem', fontWeight: isActive ? 800 : 500, color: isActive ? '#A78BFA' : 'rgba(255,255,255,0.4)', lineHeight: 1.2 }}>
                                                 {d.getDate()}
                                             </div>
-                                            <div style={{ fontSize: '0.5rem', opacity: 0.4 }}>
+                                            <div style={{ fontSize: '0.55rem', opacity: isActive ? 0.7 : 0.5, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: isActive ? 600 : 400 }}>
                                                 {monthsShort[d.getMonth()]}
                                             </div>
                                             {dayEvents.length > 0 && (
@@ -1346,6 +1714,23 @@
                             style={{ position: 'fixed', inset: 0, zIndex: 5 }}
                         />
                     )}
+
+                    {/* Lisää tapahtuma -FAB (vain kirjautuneille) */}
+                    {user && !expandedEvent && (
+                        <button onClick={() => setShowAddEvent(true)} style={{
+                            position: 'fixed', bottom: '140px', right: '16px', zIndex: 25,
+                            width: '50px', height: '50px', borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 100%)',
+                            border: 'none', color: '#fff', fontSize: '1.5rem', fontWeight: 300,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 4px 20px rgba(167,139,250,0.4)',
+                        }}>+</button>
+                    )}
+
+                    {/* Modaalit */}
+                    <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} onAuth={setUser} />
+                    <AddEventModal isOpen={showAddEvent} onClose={() => setShowAddEvent(false)} user={user} onEventAdded={(ev) => { setDbEvents(prev => [...prev, { ...ev, date: ev.start_date, time: ev.start_time || '' }]); }} />
+                    <AdminPanel isOpen={showAdmin} onClose={() => setShowAdmin(false)} />
                 </div>
             );
         };
