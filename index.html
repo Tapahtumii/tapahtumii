@@ -1380,21 +1380,25 @@
                 if (data) setUserProfile(data);
             };
 
-            // Hae tapahtumat: 1) Live API, 2) Supabase, 3) Demo fallback
+            // Hae tapahtumat: demo heti, live päälle
             useEffect(() => {
-                const loadEvents = async () => {
-                    setIsLoading(true);
-                    let allEvents = [];
+                // Näytä demo-data heti
+                setEvents(generateDemoEvents());
+                setIsLoading(false);
 
-                    // 1. Hae live-rajapinnoista
+                // Hae live-data taustalla
+                const loadLive = async () => {
+                    let liveEvents = [];
+
+                    // 1. Linked Events API:t
                     try {
-                        const liveEvents = await fetchAllEvents();
-                        if (liveEvents.length > 0) allEvents = liveEvents;
+                        const apiEvents = await fetchAllEvents();
+                        if (apiEvents.length > 0) liveEvents = apiEvents;
                     } catch(e) {
-                        console.warn('[Tapahtumii] Live-haku epäonnistui:', e);
+                        console.warn('[Tapahtumii] Live-haku:', e);
                     }
 
-                    // 2. Hae Supabasesta (käyttäjien lisäämät hyväksytyt tapahtumat)
+                    // 2. Supabase (käyttäjien lisäämät)
                     if (sb) {
                         try {
                             const today = new Date().toISOString().split('T')[0];
@@ -1418,23 +1422,20 @@
                                     ticketUrl: e.ticket_url,
                                     eventUrl: e.event_url,
                                 }));
-                                allEvents = [...allEvents, ...mapped];
+                                liveEvents = [...liveEvents, ...mapped];
                             }
                         } catch(e) {
-                            console.warn('[Tapahtumii] Supabase-haku epäonnistui:', e);
+                            console.warn('[Tapahtumii] Supabase-haku:', e);
                         }
                     }
 
-                    // 3. Demo fallback
-                    if (allEvents.length === 0) {
-                        console.log('[Tapahtumii] Käytetään demo-dataa');
-                        allEvents = generateDemoEvents();
+                    // Korvaa demo live-datalla jos saatiin tuloksia
+                    if (liveEvents.length > 0) {
+                        console.log(`[Tapahtumii] ${liveEvents.length} live-tapahtumaa ladattu`);
+                        setEvents(liveEvents);
                     }
-
-                    setEvents(allEvents);
-                    setIsLoading(false);
                 };
-                loadEvents();
+                loadLive();
             }, []);
 
             const allEvents = events;
@@ -1773,7 +1774,7 @@
 
                     {/* Modaalit */}
                     <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} onAuth={setUser} />
-                    <AddEventModal isOpen={showAddEvent} onClose={() => setShowAddEvent(false)} user={user} onEventAdded={(ev) => { setDbEvents(prev => [...prev, { ...ev, date: ev.start_date, time: ev.start_time || '' }]); }} />
+                    <AddEventModal isOpen={showAddEvent} onClose={() => setShowAddEvent(false)} user={user} onEventAdded={(ev) => { setEvents(prev => [...prev, { id: 'db-' + ev.id, title: ev.title, city: ev.city, category: ev.category, subcategory: ev.subcategory, date: ev.start_date, time: ev.start_time || '', venue: ev.venue || '', price: ev.price || '' }]); }} />
                     <AdminPanel isOpen={showAdmin} onClose={() => setShowAdmin(false)} />
                 </div>
             );
