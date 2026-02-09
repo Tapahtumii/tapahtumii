@@ -33,7 +33,7 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
@@ -1019,13 +1019,11 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhdHJsbHJhaHh3bHlnbnpsbnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NjAxMjIsImV4cCI6MjA4NjIzNjEyMn0.QaBI4aFDuJsdnX0oMgrFCmaU2C-rKulTlmbYd5ONBzw';
         let sb;
         try {
-            const _sb = window.supabase;
-            if (_sb && _sb.createClient) {
-                sb = _sb.createClient(SUPABASE_URL, SUPABASE_KEY);
-            } else if (_sb && _sb.supabase && _sb.supabase.createClient) {
-                sb = _sb.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            const { createClient } = window.supabase || {};
+            if (createClient) {
+                sb = createClient(SUPABASE_URL, SUPABASE_KEY);
             } else {
-                console.error('[Tapahtumii] Supabase kirjastoa ei löydy. window.supabase =', _sb);
+                console.error('[Tapahtumii] Supabase kirjastoa ei löydy');
                 sb = null;
             }
         } catch(e) {
