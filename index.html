@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Tahtumii — tapahtumat lähellä sinua</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            overflow: hidden; 
+            height: 100dvh;
+            background: #0a0a12;
+            color: #fff;
+        }
+        #root { height: 100dvh; }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Kupla-animaatiot */
+        @keyframes bubbleFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            25% { transform: translateY(-6px) rotate(0.5deg); }
+            50% { transform: translateY(-3px) rotate(-0.3deg); }
+            75% { transform: translateY(-8px) rotate(0.2deg); }
+        }
+
+        @keyframes bubblePop {
+            0% { transform: scale(1); opacity: 0.9; }
+            40% { transform: scale(1.3); opacity: 0.4; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        @keyframes bubbleAppear {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(15px) scale(0.95); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes fadeOutDown {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(10px) scale(0.95); }
+        }
+
+        @keyframes glowPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.6); }
+        }
+
+        @keyframes backdropIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes tapPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.94); }
+            100% { transform: scale(1); }
+        }
+
+        .bubble-float {
+            animation: bubbleFloat 5s ease-in-out infinite;
+            will-change: transform;
+        }
+
+        .bubble-pop {
+            animation: bubblePop 0.5s ease-out forwards;
+        }
+
+        .bubble-appear {
+            animation: bubbleAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .bubble {
+            cursor: pointer;
+            touch-action: none;
+            user-select: none;
+            transition: border-radius 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        width 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        box-shadow 0.45s ease,
+                        background 0.4s ease;
+        }
+
+        .bubble:active:not(.bubble-expanded) {
+            animation: tapPulse 0.2s ease-out;
+        }
+
+        .bubble-expanded {
+            border-radius: 50% !important;
+            animation: none !important;
+        }
+
+        /* Backdrop tummennus laajennetulle kuplalle */
+        .bubble-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 5;
+            animation: backdropIn 0.3s ease-out;
+        }
+
+        .bubble-inner {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            overflow: hidden;
+        }
+
+        /* Kupla heijastukset */
+        .bubble-shine {
+            position: absolute;
+            top: 8%;
+            left: 12%;
+            width: 30%;
+            height: 30%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%);
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .bubble-shine-secondary {
+            position: absolute;
+            bottom: 15%;
+            right: 10%;
+            width: 15%;
+            height: 15%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        /* Tausta-efektit */
+        .bg-gradient-mesh {
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(120, 60, 200, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(60, 100, 220, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(200, 60, 140, 0.1) 0%, transparent 50%),
+                linear-gradient(180deg, #0a0a12 0%, #0d0d1a 100%);
+        }
+
+        /* Alapalkki */
+        .bottom-nav {
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            background: linear-gradient(180deg, rgba(10, 10, 18, 0.6) 0%, rgba(10, 10, 18, 0.9) 100%);
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .bottom-nav::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(to top, rgba(10, 10, 18, 0.5), transparent);
+            pointer-events: none;
+        }
+
+        /* Yläpalkki */
+        .top-bar {
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            background: rgba(10, 10, 18, 0.7);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        /* Scroll-indikaattori */
+        .timeline-dot {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .timeline-dot.active {
+            transform: scale(1.4);
+        }
+
+        /* Modaalit */
+        .modal-overlay {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Touch feedback */
+        .touch-dragging {
+            transition: none !important;
+            animation: none !important;
+            z-index: 999 !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect, useMemo, useCallback } = React;
+
+        // ============================================================
+        // DEMO-TAPAHTUMAT — tulevaisuuden päivämäärillä
+        // ============================================================
+        // ============================================================
+        // LIVE-TAPAHTUMAHAKU — Linked Events API:t
+        // ============================================================
+        const API_ENDPOINTS = {
+            'Helsinki': 'https://api.hel.fi/linkedevents/v1/event/',
+            'Turku': 'https://api.turku.fi/linkedevents/v1/event/',
+            'Tampere': 'https://visittampere.fi/api/search?type=event&limit=100&lang=fi',
+            'Oulu': 'https://api.ouka.fi/linkedevents/v1/event/',
+        };
+
+        // YSO-avainsanat → Tahtumii-kategoriat
+        const YSO_CATEGORY_MAP = {
+            // Musiikki
+            'yso:p1808': { cat: 'Musiikki', sub: 'Musiikki' },    // musiikki
+            'yso:p29778': { cat: 'Musiikki', sub: 'Jazz' },        // jazz
+            'yso:p1882': { cat: 'Musiikki', sub: 'Klassinen' },    // klassinen musiikki
+            'yso:p6889': { cat: 'Musiikki', sub: 'Rock' },         // rock
+            'yso:p27962': { cat: 'Musiikki', sub: 'Pop' },         // pop
+            'yso:p15983': { cat: 'Musiikki', sub: 'Rap' },         // hiphop
+            'yso:p1809': { cat: 'Musiikki', sub: 'Heavy' },        // heavy
+            'yso:p12434': { cat: 'Musiikki', sub: 'Elektroninen' }, // elektroninen
+            'yso:p9834': { cat: 'Musiikki', sub: 'Blues' },         // blues
+            'yso:p9061': { cat: 'Musiikki', sub: 'Folk' },          // folk
+            'yso:p22899': { cat: 'Musiikki', sub: 'Iskelmä' },      // iskelmä
+            // Urheilu
+            'yso:p965': { cat: 'Urheilu', sub: 'Urheilu' },        // urheilu
+            'yso:p6409': { cat: 'Urheilu', sub: 'Jääkiekko' },
+            'yso:p6411': { cat: 'Urheilu', sub: 'Jalkapallo' },
+            'yso:p8781': { cat: 'Urheilu', sub: 'Koripallo' },
+            'yso:p10525': { cat: 'Urheilu', sub: 'Lentopallo' },
+            // Kulttuuri
+            'yso:p2625': { cat: 'Kulttuuri', sub: 'Teatteri' },    // teatteri
+            'yso:p5121': { cat: 'Kulttuuri', sub: 'Ooppera' },     // ooppera
+            'yso:p16327': { cat: 'Kulttuuri', sub: 'Tanssi' },     // tanssi
+            'yso:p1235': { cat: 'Kulttuuri', sub: 'Elokuva' },     // elokuva
+            'yso:p5121': { cat: 'Kulttuuri', sub: 'Ooppera' },
+            'yso:p2739': { cat: 'Kulttuuri', sub: 'Näyttely' },    // näyttelyt
+            'yso:p6283': { cat: 'Kulttuuri', sub: 'Museo' },       // museot
+            'yso:p20421': { cat: 'Kulttuuri', sub: 'Komedia' },    // komedia
+            'yso:p2850': { cat: 'Kulttuuri', sub: 'Sirkus' },      // sirkus
+            'yso:p18434': { cat: 'Kulttuuri', sub: 'Kirjallisuus' },
+            // Lapset
+            'yso:p4354': { cat: 'Lapset', sub: 'Lapset' },         // lapset (audience)
+            'yso:p6915': { cat: 'Lapset', sub: 'Lapset' },         // perhe
+        };
+
+        // Teksti-pohjainen kategoriointi (fallback)
+        const guessCategory = (name, desc) => {
+            const t = ((name || '') + ' ' + (desc || '')).toLowerCase();
+            // Musiikki-genret
+            if (/jazz/.test(t)) return { cat: 'Musiikki', sub: 'Jazz' };
+            if (/klassi|sinfoni|orkester|chamber/.test(t)) return { cat: 'Musiikki', sub: 'Klassinen' };
+            if (/rock|punk/.test(t)) return { cat: 'Musiikki', sub: 'Rock' };
+            if (/pop|iskelmä/.test(t)) return { cat: 'Musiikki', sub: 'Pop' };
+            if (/rap|hiphop|hip-hop/.test(t)) return { cat: 'Musiikki', sub: 'Rap' };
+            if (/metal|heavy/.test(t)) return { cat: 'Musiikki', sub: 'Heavy' };
+            if (/elektro|dj|techno|house/.test(t)) return { cat: 'Musiikki', sub: 'Elektroninen' };
+            if (/blues/.test(t)) return { cat: 'Musiikki', sub: 'Blues' };
+            if (/folk|kansanmusiik/.test(t)) return { cat: 'Musiikki', sub: 'Folk' };
+            if (/konsertti|keikka|livemusiik|musiik|bändi|laulaja|soittaja|kuoro/.test(t)) return { cat: 'Musiikki', sub: 'Musiikki' };
+            // Urheilu
+            if (/jääkiekko|sm-liiga|khl|mestis/.test(t)) return { cat: 'Urheilu', sub: 'Jääkiekko' };
+            if (/jalkapallo|veikkausliiga|ykkönen/.test(t)) return { cat: 'Urheilu', sub: 'Jalkapallo' };
+            if (/koripallo|basket/.test(t)) return { cat: 'Urheilu', sub: 'Koripallo' };
+            if (/lentopallo|volley/.test(t)) return { cat: 'Urheilu', sub: 'Lentopallo' };
+            if (/urheilu|ottelu|peli|matsi|turnaus|kilpailu/.test(t)) return { cat: 'Urheilu', sub: 'Urheilu' };
+            // Kulttuuri
+            if (/ooppera|opera/.test(t)) return { cat: 'Kulttuuri', sub: 'Ooppera' };
+            if (/teatteri|näytelmä|draama|esitys/.test(t)) return { cat: 'Kulttuuri', sub: 'Teatteri' };
+            if (/komedia|stand.?up|huumori/.test(t)) return { cat: 'Kulttuuri', sub: 'Komedia' };
+            if (/elokuva|film|leffailta/.test(t)) return { cat: 'Kulttuuri', sub: 'Elokuva' };
+            if (/näyttely|taidegalleria|galleria/.test(t)) return { cat: 'Kulttuuri', sub: 'Näyttely' };
+            if (/museo/.test(t)) return { cat: 'Kulttuuri', sub: 'Museo' };
+            if (/tanssi|baletti|dance/.test(t)) return { cat: 'Kulttuuri', sub: 'Tanssi' };
+            if (/sirkus|circus/.test(t)) return { cat: 'Kulttuuri', sub: 'Sirkus' };
+            if (/kirja|kirjallisuus|runoilta|lukupiiri/.test(t)) return { cat: 'Kulttuuri', sub: 'Kirjallisuus' };
+            // Lapset
+            if (/laps|perhe|family|kids|satutuokio|nukketeatter/.test(t)) return { cat: 'Lapset', sub: 'Lapset' };
+            // Kulttuuri fallback
+            return { cat: 'Kulttuuri', sub: 'Kulttuuri' };
+        };
+
+        // Linked Events → Tahtumii event -muunnos
+        const parseLinkedEvent = (ev, city, idOffset) => {
+            const name = ev.name?.fi || ev.name?.en || ev.name?.sv || '';
+            const desc = ev.short_description?.fi || ev.description?.fi || '';
+            const startTime = ev.start_time || '';
+            
+            if (!name || !startTime) return null;
+            
+            const date = startTime.split('T')[0];
+            const timeMatch = startTime.match(/T(\d{2}:\d{2})/);
+            const time = timeMatch ? timeMatch[1] : '';
+            
+            // Paikan nimi
+            const venueName = ev.location?.name?.fi || ev.location?.name?.en || '';
+            const venueCity = ev.location?.address_locality?.fi || '';
+            
+            // Kategoriointi YSO-avainsanoista
+            let category = null;
+            if (ev.keywords) {
+                for (const kw of ev.keywords) {
+                    let kwId = null;
+                    if (typeof kw === 'string') {
+                        kwId = kw;
+                    } else if (kw?.id) {
+                        kwId = kw.id;
+                    } else if (kw?.['@id']) {
+                        // URL muodossa: https://api.hel.fi/.../keyword/yso:p1808/
+                        const parts = kw['@id'].replace(/\/$/, '').split('/');
+                        kwId = parts[parts.length - 1];
+                    }
+                    if (kwId && YSO_CATEGORY_MAP[kwId]) {
+                        category = YSO_CATEGORY_MAP[kwId];
+                        break;
+                    }
+                }
+            }
+            if (!category) category = guessCategory(name, desc);
+            
+            // Hinta
+            let price = '';
+            if (ev.offers?.length) {
+                const offer = ev.offers[0];
+                if (offer.is_free) price = 'Ilmainen';
+                else if (offer.price?.fi) price = offer.price.fi;
+            }
+            
+            // Lippu-URL
+            const ticketUrl = ev.offers?.[0]?.info_url?.fi || ev.info_url?.fi || '';
+            const eventUrl = ev.info_url?.fi || '';
+            
+            // Helsinki-alue: Espoo/Vantaa näytetään Helsingin alla
+            let displayCity = city;
+            if (city === 'Helsinki' && venueCity) {
+                const lc = venueCity.toLowerCase();
+                if (lc.includes('espoo') || lc.includes('vantaa') || lc.includes('kauniainen')) {
+                    displayCity = 'Helsinki'; // PKS-alue
+                }
+            }
+            
+            // Näytä venue + kaupunki jos eri kuin pääkaupunki
+            let venueDisplay = venueName;
+            if (venueCity && !venueName.toLowerCase().includes(venueCity.toLowerCase()) &&
+                venueCity.toLowerCase() !== city.toLowerCase()) {
+                venueDisplay = venueName ? `${venueName}, ${venueCity}` : venueCity;
+            }
+
+            return {
+                id: idOffset + Math.abs(hashCode(ev.id || name + date)),
+                title: name,
+                city: displayCity,
+                category: category.cat,
+                subcategory: category.sub,
+                date,
+                time,
+                venue: venueDisplay,
+                description: (ev.short_description?.fi || '').replace(/<[^>]*>/g, '').substring(0, 200),
+                price,
+                ticketUrl,
+                eventUrl,
+            };
+        };
+        
+        const hashCode = (s) => {
+            let h = 0;
+            for (let i = 0; i < s.length; i++) {
+                h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+            }
+            return h;
+        };
+
+        // Hae tapahtumat Linked Events -rajapinnasta
+        const fetchLinkedEvents = async (city, baseUrl) => {
+            const today = new Date().toISOString().split('T')[0];
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + 30);
+            const end = endDate.toISOString().split('T')[0];
+            
+            const params = new URLSearchParams({
+                start: today,
+                end: end,
+                page_size: '100',
+                format: 'json',
+                include: 'location',
+                sort: 'start_time',
+                super_event_type: 'none',
+            });
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+                const res = await fetch(`${baseUrl}?${params}`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const events = (data.data || data.results || []);
+                const idOffset = city === 'Helsinki' ? 1000 : city === 'Tampere' ? 2000 : city === 'Turku' ? 3000 : 4000;
+                return events
+                    .map(ev => parseLinkedEvent(ev, city, idOffset))
+                    .filter(Boolean);
+            } catch (err) {
+                console.warn(`[Tahtumii] ${city} API-haku epäonnistui:`, err.message);
+                return [];
+            }
+        };
+
+        // Visit Tampere API (eri formaatti)
+        const fetchTampereEvents = async () => {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+                const res = await fetch('https://visittampere.fi/api/search?type=event&limit=100&lang=fi', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const events = data.hits || data.results || data || [];
+                return events.map((ev, i) => {
+                    const name = ev.title || ev.name || '';
+                    const date = ev.start_date?.split('T')?.[0] || ev.date || '';
+                    const time = ev.start_date?.match(/T(\d{2}:\d{2})/)?.[1] || ev.start_time || '';
+                    if (!name || !date) return null;
+                    const category = guessCategory(name, ev.description || '');
+                    return {
+                        id: 2000 + i,
+                        title: name,
+                        city: 'Tampere',
+                        category: category.cat,
+                        subcategory: category.sub,
+                        date,
+                        time,
+                        venue: ev.location?.name || ev.venue || '',
+                        description: (ev.description || '').replace(/<[^>]*>/g, '').substring(0, 200),
+                        price: ev.price || (ev.is_free ? 'Ilmainen' : ''),
+                        ticketUrl: ev.ticket_url || ev.url || '',
+                        eventUrl: ev.url || '',
+                    };
+                }).filter(Boolean);
+            } catch (err) {
+                console.warn('[Tahtumii] Tampere API-haku epäonnistui:', err.message);
+                return [];
+            }
+        };
+
+        // Master-funktio: hae kaikista lähteistä
+        const fetchAllEvents = async () => {
+            const results = await Promise.allSettled([
+                fetchLinkedEvents('Helsinki', 'https://api.hel.fi/linkedevents/v1/event/'),
+                fetchLinkedEvents('Turku', 'https://api.turku.fi/linkedevents/v1/event/'),
+                fetchTampereEvents(),
+                fetchLinkedEvents('Oulu', 'https://api.ouka.fi/linkedevents/v1/event/'),
+            ]);
+            
+            const all = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+            console.log(`[Tahtumii] Haettu ${all.length} tapahtumaa live-rajapinnoista`);
+            return all;
+        };
+
+        // Demo-data fallbackina jos API ei toimi
+        const generateDemoEvents = () => {
+            const today = new Date();
+            const makeDate = (daysFromNow) => {
+                const d = new Date(today);
+                d.setDate(d.getDate() + daysFromNow);
+                return d.toISOString().split('T')[0];
+            };
+
+            return [
+                // ═══════════════ HELSINKI ═══════════════
+                // Musiikki
+                { id: 1, title: "Nightwish — Human. :II: Nature. Tour", city: "Helsinki", category: "Musiikki", subcategory: "Heavy", date: makeDate(2), time: "19:00", venue: "Helsinki Ice Hall", price: "59–89€" },
+                { id: 2, title: "Helsinki Jazz Night", city: "Helsinki", category: "Musiikki", subcategory: "Jazz", date: makeDate(3), time: "20:00", venue: "Savoy-teatteri", price: "35–55€" },
+                { id: 3, title: "Apulanta: 30v-juhlakiertue", city: "Helsinki", category: "Musiikki", subcategory: "Rock", date: makeDate(7), time: "20:00", venue: "Tavastia", price: "39–59€" },
+                { id: 4, title: "Cledos Live", city: "Helsinki", category: "Musiikki", subcategory: "Rap", date: makeDate(6), time: "21:00", venue: "The Circus", price: "29–45€" },
+                { id: 5, title: "Käärijä: Cha Cha Cha Tour", city: "Helsinki", category: "Musiikki", subcategory: "Pop", date: makeDate(10), time: "19:00", venue: "Helsinki Ice Hall", price: "45–65€" },
+                { id: 6, title: "Klassinen gaala: Sibelius", city: "Helsinki", category: "Musiikki", subcategory: "Klassinen", date: makeDate(12), time: "19:00", venue: "Musiikkitalo", price: "35–80€" },
+                { id: 7, title: "Hector — Jäähyväiskiertue", city: "Helsinki", category: "Musiikki", subcategory: "Iskelmä", date: makeDate(5), time: "19:00", venue: "Finlandia-talo", price: "49–79€" },
+                { id: 8, title: "DJ Herberts House Night", city: "Helsinki", category: "Musiikki", subcategory: "Elektroninen", date: makeDate(1), time: "22:00", venue: "Ääniwalli", price: "15€" },
+                { id: 9, title: "Erja Lyytinen Blues Band", city: "Helsinki", category: "Musiikki", subcategory: "Blues", date: makeDate(4), time: "20:00", venue: "Storyville", price: "25€" },
+                { id: 10, title: "Värttinä Folk Night", city: "Helsinki", category: "Musiikki", subcategory: "Folk", date: makeDate(8), time: "19:00", venue: "Savoy-teatteri", price: "32–48€" },
+                { id: 11, title: "Cheek — Comeback Show", city: "Helsinki", category: "Musiikki", subcategory: "Rap", date: makeDate(14), time: "20:00", venue: "Olympiastadion", price: "55–99€" },
+                { id: 12, title: "Sunrise Avenue Farewell", city: "Helsinki", category: "Musiikki", subcategory: "Rock", date: makeDate(9), time: "19:30", venue: "Hartwall Arena", price: "49–75€" },
+                // Urheilu
+                { id: 13, title: "HIFK vs Tappara", city: "Helsinki", category: "Urheilu", subcategory: "Jääkiekko", date: makeDate(1), time: "18:30", venue: "Helsinki Halli", price: "25–45€" },
+                { id: 14, title: "HJK vs Inter Turku", city: "Helsinki", category: "Urheilu", subcategory: "Jalkapallo", date: makeDate(8), time: "17:00", venue: "Bolt Arena", price: "15–30€" },
+                { id: 15, title: "Helsinki Seagulls vs Karhu Basket", city: "Helsinki", category: "Urheilu", subcategory: "Koripallo", date: makeDate(3), time: "18:00", venue: "Kisahalli", price: "12–20€" },
+                { id: 16, title: "Helsinki Open Tennis", city: "Helsinki", category: "Urheilu", subcategory: "Tennis", date: makeDate(11), time: "10:00", venue: "Tali Tennis Center", price: "20–40€" },
+                { id: 17, title: "HIFK vs Jokerit", city: "Helsinki", category: "Urheilu", subcategory: "Jääkiekko", date: makeDate(5), time: "18:30", venue: "Helsinki Halli", price: "28–50€" },
+                // Kulttuuri
+                { id: 18, title: "Kansallisooppera: Carmen", city: "Helsinki", category: "Kulttuuri", subcategory: "Ooppera", date: makeDate(5), time: "19:00", venue: "Kansallisooppera", price: "45–120€" },
+                { id: 19, title: "Helsinki Design Market", city: "Helsinki", category: "Kulttuuri", subcategory: "Näyttely", date: makeDate(4), time: "10:00", venue: "Kaapelitehdas", price: "8€" },
+                { id: 20, title: "Stand Up: Ismo Leikola", city: "Helsinki", category: "Kulttuuri", subcategory: "Komedia", date: makeDate(2), time: "20:00", venue: "Comedy Club Helsinki", price: "25–35€" },
+                { id: 21, title: "Kansallisteatteri: Seitsemän veljestä", city: "Helsinki", category: "Kulttuuri", subcategory: "Teatteri", date: makeDate(6), time: "19:00", venue: "Kansallisteatteri", price: "30–55€" },
+                { id: 22, title: "Amos Rex: Tulevaisuuden taide", city: "Helsinki", category: "Kulttuuri", subcategory: "Museo", date: makeDate(1), time: "11:00", venue: "Amos Rex", price: "18€" },
+                { id: 23, title: "Helsinki Dance Company", city: "Helsinki", category: "Kulttuuri", subcategory: "Tanssi", date: makeDate(9), time: "19:00", venue: "Aleksanterin teatteri", price: "28–45€" },
+                { id: 24, title: "DocPoint elokuvafestivaali", city: "Helsinki", category: "Kulttuuri", subcategory: "Elokuva", date: makeDate(3), time: "18:00", venue: "Kino Regina", price: "12€" },
+                { id: 25, title: "Helsinki Lit — kirjallisuusfestivaali", city: "Helsinki", category: "Kulttuuri", subcategory: "Kirjallisuus", date: makeDate(7), time: "17:00", venue: "Oodi", price: "Ilmainen" },
+                // Lapset
+                { id: 26, title: "Muumien taikatalvi", city: "Helsinki", category: "Lapset", subcategory: "Teatteri", date: makeDate(2), time: "14:00", venue: "Svenska Teatern", price: "22–38€" },
+                { id: 27, title: "Hevisaurus Kids Rock", city: "Helsinki", category: "Lapset", subcategory: "Musiikki", date: makeDate(4), time: "13:00", venue: "Kulttuuritalo", price: "18–25€" },
+                { id: 28, title: "Heureka: Avaruusnäyttely", city: "Helsinki", category: "Lapset", subcategory: "Näyttely", date: makeDate(1), time: "10:00", venue: "Heureka, Vantaa", price: "22€ / 16€ lapset" },
+                { id: 29, title: "Sirkus Finlandia", city: "Helsinki", category: "Lapset", subcategory: "Sirkus", date: makeDate(6), time: "15:00", venue: "Sirkusteltta, Toolönlahti", price: "20–35€" },
+                // Espoo/Vantaa
+                { id: 30, title: "Espoo Ciné: Elokuvafestivaali", city: "Helsinki", category: "Kulttuuri", subcategory: "Elokuva", date: makeDate(3), time: "18:00", venue: "Sellosali, Espoo", price: "12–15€" },
+                { id: 31, title: "Blues vs Pelicans", city: "Helsinki", category: "Urheilu", subcategory: "Jääkiekko", date: makeDate(2), time: "18:30", venue: "Metro Areena, Espoo", price: "20–40€" },
+                { id: 32, title: "April Jazz Espoo", city: "Helsinki", category: "Musiikki", subcategory: "Jazz", date: makeDate(8), time: "19:30", venue: "Espoon kulttuurikeskus", price: "25–65€" },
+                { id: 33, title: "Angry Birds Park Show", city: "Helsinki", category: "Lapset", subcategory: "Näytös", date: makeDate(5), time: "11:00", venue: "Leppävaara, Espoo", price: "15–25€" },
+                { id: 34, title: "Vantaa Comedy Night", city: "Helsinki", category: "Kulttuuri", subcategory: "Komedia", date: makeDate(4), time: "20:00", venue: "Tikkurilan teatteri, Vantaa", price: "25€" },
+                
+                // ═══════════════ TAMPERE ═══════════════
+                // Musiikki
+                { id: 40, title: "Tappara vs Ilves — Derby", city: "Tampere", category: "Urheilu", subcategory: "Jääkiekko", date: makeDate(1), time: "18:30", venue: "Nokia Arena", price: "30–55€" },
+                { id: 41, title: "Sara Bareilles Live", city: "Tampere", category: "Musiikki", subcategory: "Pop", date: makeDate(5), time: "20:00", venue: "Tampere-talo", price: "49–79€" },
+                { id: 42, title: "Stam1na: Hardcore Night", city: "Tampere", category: "Musiikki", subcategory: "Heavy", date: makeDate(7), time: "21:00", venue: "Klubi", price: "35€" },
+                { id: 43, title: "Tampere Jazz Happening", city: "Tampere", category: "Musiikki", subcategory: "Jazz", date: makeDate(3), time: "19:00", venue: "Tullikamarin Pakkahuone", price: "25–40€" },
+                { id: 44, title: "Antti Tuisku Live", city: "Tampere", category: "Musiikki", subcategory: "Pop", date: makeDate(10), time: "20:00", venue: "Nokia Arena", price: "45–69€" },
+                { id: 45, title: "CMX — Aion Tour", city: "Tampere", category: "Musiikki", subcategory: "Rock", date: makeDate(6), time: "20:00", venue: "Klubi", price: "35–45€" },
+                { id: 46, title: "Tampere Filharmonia: Beethoven", city: "Tampere", category: "Musiikki", subcategory: "Klassinen", date: makeDate(9), time: "19:00", venue: "Tampere-talo", price: "25–55€" },
+                { id: 47, title: "DJ Orion Techno Night", city: "Tampere", category: "Musiikki", subcategory: "Elektroninen", date: makeDate(2), time: "22:00", venue: "Telakka", price: "12€" },
+                { id: 48, title: "Portion Boys keikka", city: "Tampere", category: "Musiikki", subcategory: "Iskelmä", date: makeDate(4), time: "21:00", venue: "Olympia", price: "25€" },
+                // Urheilu
+                { id: 49, title: "Ilves vs KalPa", city: "Tampere", category: "Urheilu", subcategory: "Jääkiekko", date: makeDate(4), time: "18:30", venue: "Nokia Arena", price: "28–48€" },
+                { id: 50, title: "Tampereen Pyrintö vs BC Nokia", city: "Tampere", category: "Urheilu", subcategory: "Koripallo", date: makeDate(2), time: "18:00", venue: "Hakametsä", price: "10–18€" },
+                { id: 51, title: "Ilves vs SJK", city: "Tampere", category: "Urheilu", subcategory: "Jalkapallo", date: makeDate(8), time: "17:00", venue: "Tammela Stadion", price: "15–25€" },
+                // Kulttuuri
+                { id: 52, title: "Tampereen Teatterikesä", city: "Tampere", category: "Kulttuuri", subcategory: "Teatteri", date: makeDate(9), time: "18:00", venue: "Pyynikin kesäteatteri", price: "29–42€" },
+                { id: 53, title: "Stand Up: Sami Hedberg", city: "Tampere", category: "Kulttuuri", subcategory: "Komedia", date: makeDate(3), time: "20:00", venue: "Pakkahuone", price: "32–42€" },
+                { id: 54, title: "Sara Hildénin museo: Nykytaide", city: "Tampere", category: "Kulttuuri", subcategory: "Museo", date: makeDate(1), time: "10:00", venue: "Sara Hildénin museo", price: "12€" },
+                { id: 55, title: "Tampere Biennale", city: "Tampere", category: "Kulttuuri", subcategory: "Näyttely", date: makeDate(11), time: "12:00", venue: "Tampere-talo", price: "15€" },
+                { id: 56, title: "Tampere Film Festival", city: "Tampere", category: "Kulttuuri", subcategory: "Elokuva", date: makeDate(5), time: "16:00", venue: "Plevna", price: "10€" },
+                // Lapset
+                { id: 57, title: "Lasten sirkusfestivaali", city: "Tampere", category: "Lapset", subcategory: "Sirkus", date: makeDate(3), time: "13:00", venue: "Särkänniemi", price: "18€" },
+                { id: 58, title: "Muumi-musikaali", city: "Tampere", category: "Lapset", subcategory: "Teatteri", date: makeDate(6), time: "14:00", venue: "Tampere-talo", price: "22–35€" },
+                { id: 59, title: "Särkänniemi: Koiramäki", city: "Tampere", category: "Lapset", subcategory: "Näytös", date: makeDate(1), time: "11:00", venue: "Särkänniemi", price: "Puistolippu" },
+
+                // ═══════════════ TURKU ═══════════════
+                // Musiikki
+                { id: 60, title: "Ruisrock Warm-up Party", city: "Turku", category: "Musiikki", subcategory: "Rock", date: makeDate(4), time: "18:00", venue: "Logomo", price: "25–45€" },
+                { id: 61, title: "Turun Musiikkijuhlat", city: "Turku", category: "Musiikki", subcategory: "Klassinen", date: makeDate(11), time: "19:00", venue: "Turun tuomiokirkko", price: "20–60€" },
+                { id: 62, title: "JVG Live", city: "Turku", category: "Musiikki", subcategory: "Rap", date: makeDate(8), time: "20:00", venue: "Logomo", price: "39–55€" },
+                { id: 63, title: "Haloo Helsinki! Arena Tour", city: "Turku", category: "Musiikki", subcategory: "Pop", date: makeDate(6), time: "19:00", venue: "Gatorade Center", price: "42–62€" },
+                { id: 64, title: "Korpiklaani Folk Metal Night", city: "Turku", category: "Musiikki", subcategory: "Heavy", date: makeDate(3), time: "20:00", venue: "Club Gig", price: "30€" },
+                { id: 65, title: "Turku Jazz Festival", city: "Turku", category: "Musiikki", subcategory: "Jazz", date: makeDate(9), time: "19:00", venue: "Manilla", price: "20–35€" },
+                { id: 66, title: "Kaija Koo — Kaikki bonukset", city: "Turku", category: "Musiikki", subcategory: "Iskelmä", date: makeDate(5), time: "19:30", venue: "Logomo", price: "39–55€" },
+                { id: 67, title: "Turku Reggae Night", city: "Turku", category: "Musiikki", subcategory: "Reggae", date: makeDate(2), time: "21:00", venue: "Dynamo", price: "15€" },
+                // Urheilu
+                { id: 68, title: "TPS vs Lukko", city: "Turku", category: "Urheilu", subcategory: "Jääkiekko", date: makeDate(2), time: "18:30", venue: "Gatorade Center", price: "22–38€" },
+                { id: 69, title: "TPS vs HIFK", city: "Turku", category: "Urheilu", subcategory: "Jääkiekko", date: makeDate(7), time: "18:30", venue: "Gatorade Center", price: "25–42€" },
+                { id: 70, title: "Inter Turku vs HJK", city: "Turku", category: "Urheilu", subcategory: "Jalkapallo", date: makeDate(10), time: "17:00", venue: "Veritas Stadion", price: "12–22€" },
+                { id: 71, title: "Turku Marathon", city: "Turku", category: "Urheilu", subcategory: "Yleisurheilu", date: makeDate(13), time: "09:00", venue: "Turun keskusta", price: "45€ osallistuminen" },
+                // Kulttuuri
+                { id: 72, title: "Turku Komedia Klubi", city: "Turku", category: "Kulttuuri", subcategory: "Komedia", date: makeDate(3), time: "20:30", venue: "Dynamo", price: "18€" },
+                { id: 73, title: "Turun Kaupunginteatteri: Hamlet", city: "Turku", category: "Kulttuuri", subcategory: "Teatteri", date: makeDate(5), time: "19:00", venue: "Turun kaupunginteatteri", price: "25–45€" },
+                { id: 74, title: "Aboa Vetus & Ars Nova", city: "Turku", category: "Kulttuuri", subcategory: "Museo", date: makeDate(1), time: "10:00", venue: "Aboa Vetus", price: "14€" },
+                { id: 75, title: "Logomo: Design-näyttely", city: "Turku", category: "Kulttuuri", subcategory: "Näyttely", date: makeDate(4), time: "11:00", venue: "Logomo", price: "10€" },
+                { id: 76, title: "Turku Dance Festival", city: "Turku", category: "Kulttuuri", subcategory: "Tanssi", date: makeDate(12), time: "19:00", venue: "Sigyn-sali", price: "22–38€" },
+                // Lapset
+                { id: 77, title: "Seikkailupuisto: Perhetapahtuma", city: "Turku", category: "Lapset", subcategory: "Näytös", date: makeDate(2), time: "11:00", venue: "Kupittaan puisto", price: "Ilmainen" },
+                { id: 78, title: "Lasten teatteripäivä", city: "Turku", category: "Lapset", subcategory: "Teatteri", date: makeDate(6), time: "13:00", venue: "Turun kaupunginteatteri", price: "12€" },
+
+                // ═══════════════ OULU ═══════════════
+                // Musiikki
+                { id: 80, title: "Kärpät vs Ässät", city: "Oulu", category: "Urheilu", subcategory: "Jääkiekko", date: makeDate(1), time: "18:30", venue: "Oulun Energia Areena", price: "22–40€" },
+                { id: 81, title: "Oulu Jazz Nights", city: "Oulu", category: "Musiikki", subcategory: "Jazz", date: makeDate(5), time: "20:00", venue: "45 Special", price: "18–30€" },
+                { id: 82, title: "Nallikarirockfest", city: "Oulu", category: "Musiikki", subcategory: "Rock", date: makeDate(9), time: "16:00", venue: "Nallikari", price: "35–55€" },
+                { id: 83, title: "Tervahiihto Afterparty", city: "Oulu", category: "Musiikki", subcategory: "Pop", date: makeDate(7), time: "19:00", venue: "Club Teatria", price: "15€" },
+                { id: 84, title: "Oulu Sinfonia: Mahler", city: "Oulu", category: "Musiikki", subcategory: "Klassinen", date: makeDate(4), time: "19:00", venue: "Madetojan sali", price: "20–45€" },
+                { id: 85, title: "Paleface & Brädi Live", city: "Oulu", category: "Musiikki", subcategory: "Rap", date: makeDate(3), time: "21:00", venue: "45 Special", price: "28€" },
+                { id: 86, title: "Poets of the Fall", city: "Oulu", category: "Musiikki", subcategory: "Rock", date: makeDate(6), time: "20:00", venue: "Club Teatria", price: "35–45€" },
+                { id: 87, title: "Arttu Wiskari Klubi-ilta", city: "Oulu", category: "Musiikki", subcategory: "Iskelmä", date: makeDate(2), time: "20:00", venue: "Tuba", price: "22€" },
+                { id: 88, title: "DJ Sasu Ripatti — Ambient Night", city: "Oulu", category: "Musiikki", subcategory: "Elektroninen", date: makeDate(8), time: "22:00", venue: "45 Special", price: "10€" },
+                // Urheilu
+                { id: 89, title: "Kärpät vs Lukko", city: "Oulu", category: "Urheilu", subcategory: "Jääkiekko", date: makeDate(4), time: "18:30", venue: "Oulun Energia Areena", price: "24–42€" },
+                { id: 90, title: "AC Oulu vs KuPS", city: "Oulu", category: "Urheilu", subcategory: "Jalkapallo", date: makeDate(10), time: "17:00", venue: "Raatti", price: "12–20€" },
+                { id: 91, title: "Oulun Kärpät vs TPS", city: "Oulu", category: "Urheilu", subcategory: "Jääkiekko", date: makeDate(8), time: "18:30", venue: "Oulun Energia Areena", price: "22–40€" },
+                // Kulttuuri
+                { id: 92, title: "Oulun Lasten Teatteri", city: "Oulu", category: "Lapset", subcategory: "Teatteri", date: makeDate(3), time: "14:00", venue: "Oulun kaupunginteatteri", price: "12–18€" },
+                { id: 93, title: "Stand Up: Niko Kivelä", city: "Oulu", category: "Kulttuuri", subcategory: "Komedia", date: makeDate(2), time: "20:00", venue: "45 Special", price: "22€" },
+                { id: 94, title: "Pohjoinen valokuvanäyttely", city: "Oulu", category: "Kulttuuri", subcategory: "Näyttely", date: makeDate(1), time: "10:00", venue: "Oulun taidemuseo", price: "8€" },
+                { id: 95, title: "Oulun kaupunginteatteri: Tuntematon sotilas", city: "Oulu", category: "Kulttuuri", subcategory: "Teatteri", date: makeDate(5), time: "19:00", venue: "Oulun kaupunginteatteri", price: "28–42€" },
+                { id: 96, title: "Tietomaa: Dinosaurusnäyttely", city: "Oulu", category: "Lapset", subcategory: "Museo", date: makeDate(1), time: "10:00", venue: "Tietomaa", price: "20€ / 14€ lapset" },
+                { id: 97, title: "Oulun elokuvakeskus: Leffailta", city: "Oulu", category: "Kulttuuri", subcategory: "Elokuva", date: makeDate(6), time: "18:30", venue: "Star", price: "12€" },
+                { id: 98, title: "Perhesirkus Oulu", city: "Oulu", category: "Lapset", subcategory: "Sirkus", date: makeDate(7), time: "14:00", venue: "Ouluhalli", price: "15–25€" },
+            ];
+        };
+
+        // ============================================================
+        // IKONIT (SVG-komponentit)
+        // ============================================================
+        const CalendarIcon = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+        );
+        const TicketIcon = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/>
+            </svg>
+        );
+        const MapPinIcon = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+        );
+        const ClockIcon = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+        );
+        const XIcon = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        );
+        const UserIcon = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+        );
+        const ExternalLinkIcon = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+        );
+
+        // ============================================================
+        // VÄRIT
+        // ============================================================
+        const categoryColors = {
+            // ── Musiikki — genret ──
+            'Jazz':         { bg: '#4C6EF5', glow: 'rgba(76,110,245,0.5)' },
+            'Klassinen':    { bg: '#9146FF', glow: 'rgba(145,70,255,0.5)' },
+            'Rock':         { bg: '#EF4444', glow: 'rgba(239,68,68,0.5)' },
+            'Pop':          { bg: '#F472B6', glow: 'rgba(244,114,182,0.5)' },
+            'Rap':          { bg: '#6366F1', glow: 'rgba(99,102,241,0.5)' },
+            'Heavy':        { bg: '#64748B', glow: 'rgba(100,116,139,0.5)' },
+            'Elektroninen': { bg: '#06B6D4', glow: 'rgba(6,182,212,0.5)' },
+            'Blues':        { bg: '#2563EB', glow: 'rgba(37,99,235,0.5)' },
+            'Country':      { bg: '#D97706', glow: 'rgba(217,119,6,0.5)' },
+            'Folk':         { bg: '#65A30D', glow: 'rgba(101,163,13,0.5)' },
+            'Iskelmä':      { bg: '#E879F9', glow: 'rgba(232,121,249,0.5)' },
+            'R&B':          { bg: '#8B5CF6', glow: 'rgba(139,92,246,0.5)' },
+            'Latina':       { bg: '#F97316', glow: 'rgba(249,115,22,0.5)' },
+            'Reggae':       { bg: '#10B981', glow: 'rgba(16,185,129,0.5)' },
+            'Punk':         { bg: '#DC2626', glow: 'rgba(220,38,38,0.5)' },
+            // ── Urheilu — lajit ──
+            'Jääkiekko':    { bg: '#3B82F6', glow: 'rgba(59,130,246,0.5)' },
+            'Jalkapallo':   { bg: '#22C55E', glow: 'rgba(34,197,94,0.5)' },
+            'Koripallo':    { bg: '#F97316', glow: 'rgba(249,115,22,0.5)' },
+            'Lentopallo':   { bg: '#FBBF24', glow: 'rgba(251,191,36,0.5)' },
+            'Tennis':       { bg: '#A3E635', glow: 'rgba(163,230,53,0.5)' },
+            'Yleisurheilu': { bg: '#EF4444', glow: 'rgba(239,68,68,0.5)' },
+            'Hiihto':       { bg: '#38BDF8', glow: 'rgba(56,189,248,0.5)' },
+            'Pesäpallo':    { bg: '#FCD34D', glow: 'rgba(252,211,77,0.5)' },
+            'Moottoriurheilu': { bg: '#78716C', glow: 'rgba(120,113,108,0.5)' },
+            'Golf':         { bg: '#4ADE80', glow: 'rgba(74,222,128,0.5)' },
+            'Kamppailulajit': { bg: '#B91C1C', glow: 'rgba(185,28,28,0.5)' },
+            // ── Kulttuuri ──
+            'Ooppera':      { bg: '#A855F7', glow: 'rgba(168,85,247,0.5)' },
+            'Teatteri':     { bg: '#F97316', glow: 'rgba(249,115,22,0.5)' },
+            'Komedia':      { bg: '#FBBF24', glow: 'rgba(251,191,36,0.5)' },
+            'Elokuva':      { bg: '#E879F9', glow: 'rgba(232,121,249,0.5)' },
+            'Näyttely':     { bg: '#14B8A6', glow: 'rgba(20,184,166,0.5)' },
+            'Tanssi':       { bg: '#FB7185', glow: 'rgba(251,113,133,0.5)' },
+            'Kirjallisuus': { bg: '#A78BFA', glow: 'rgba(167,139,250,0.5)' },
+            'Sirkus':       { bg: '#FB923C', glow: 'rgba(251,146,60,0.5)' },
+            'Museo':        { bg: '#2DD4BF', glow: 'rgba(45,212,191,0.5)' },
+            // ── Lapset ──
+            'Näytös':       { bg: '#FB7185', glow: 'rgba(251,113,133,0.5)' },
+            // ── Pääkategoriat (fallback) ──
+            'Musiikki':     { bg: '#8B5CF6', glow: 'rgba(139,92,246,0.5)' },
+            'Urheilu':      { bg: '#3B82F6', glow: 'rgba(59,130,246,0.5)' },
+            'Kulttuuri':    { bg: '#F59E0B', glow: 'rgba(245,158,11,0.5)' },
+            'Lapset':       { bg: '#FB7185', glow: 'rgba(251,113,133,0.5)' },
+        };
+
+        const getColor = (cat, sub) => {
+            if (sub && categoryColors[sub]) return categoryColors[sub];
+            if (cat && categoryColors[cat]) return categoryColors[cat];
+            return { bg: '#6366F1', glow: 'rgba(99,102,241,0.5)' };
+        };
+
+        // ============================================================
+        // BUBBLE-KOMPONENTTI — touch-interaktiot
+        // ============================================================
+        const Bubble = ({ event, isExpanded, onToggle, animDelay }) => {
+            const bubbleRef = useRef(null);
+            const dragState = useRef({ isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, velocityX: 0, lastX: 0, lastTime: 0 });
+            const [offset, setOffset] = useState({ x: 0, y: 0 });
+            const [isDragging, setIsDragging] = useState(false);
+            const [hasAppeared, setHasAppeared] = useState(false);
+            const [contentVisible, setContentVisible] = useState(false);
+
+            const color = getColor(event.category, event.subcategory);
+            
+            // Kupla koko — satunnainen perustuen id:hen
+            const sizeVar = (event.id * 13) % 4;
+            const baseSize = 85 + sizeVar * 18;
+
+            // Satunnainen vaaka-asema
+            const randomLeft = ((event.id * 31 + event.id * event.id * 11 + event.id * 67) % 65);
+
+            useEffect(() => {
+                const timer = setTimeout(() => setHasAppeared(true), animDelay * 80);
+                return () => clearTimeout(timer);
+            }, [animDelay]);
+
+            // Viivästetty sisältö — näytä vasta kun kupla on laajentunut
+            useEffect(() => {
+                if (isExpanded) {
+                    const timer = setTimeout(() => setContentVisible(true), 150);
+                    return () => clearTimeout(timer);
+                } else {
+                    setContentVisible(false);
+                }
+            }, [isExpanded]);
+
+            // Touch-käsittely
+            const handleTouchStart = useCallback((e) => {
+                if (isExpanded) return;
+                const touch = e.touches[0];
+                dragState.current = {
+                    isDragging: false,
+                    startX: touch.clientX,
+                    startY: touch.clientY,
+                    currentX: 0,
+                    currentY: 0,
+                    velocityX: 0,
+                    lastX: touch.clientX,
+                    lastTime: Date.now()
+                };
+            }, [isExpanded]);
+
+            const handleTouchMove = useCallback((e) => {
+                if (isExpanded) return;
+                const touch = e.touches[0];
+                const dx = touch.clientX - dragState.current.startX;
+                const dy = touch.clientY - dragState.current.startY;
+                
+                if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+                    dragState.current.isDragging = true;
+                    setIsDragging(true);
+                    
+                    const now = Date.now();
+                    const dt = now - dragState.current.lastTime;
+                    if (dt > 0) {
+                        dragState.current.velocityX = (touch.clientX - dragState.current.lastX) / dt;
+                    }
+                    dragState.current.lastX = touch.clientX;
+                    dragState.current.lastTime = now;
+                }
+                
+                if (dragState.current.isDragging) {
+                    e.preventDefault();
+                    setOffset({ x: dx * 0.8, y: dy * 0.4 });
+                }
+            }, [isExpanded]);
+
+            const handleTouchEnd = useCallback(() => {
+                if (dragState.current.isDragging) {
+                    setIsDragging(false);
+                    setOffset({ x: 0, y: 0 });
+                    setTimeout(() => { dragState.current.isDragging = false; }, 100);
+                } else {
+                    onToggle();
+                }
+            }, [onToggle]);
+
+            const handleClick = useCallback((e) => {
+                if (!('ontouchstart' in window)) onToggle();
+            }, [onToggle]);
+
+            // Scroll kupla keskelle kun se laajenee
+            useEffect(() => {
+                if (isExpanded && bubbleRef.current) {
+                    setTimeout(() => {
+                        if (!bubbleRef.current) return;
+                        const rect = bubbleRef.current.getBoundingClientRect();
+                        const viewportHeight = window.innerHeight;
+                        const isMob = window.innerWidth < 768;
+                        const bubbleH = isMob ? Math.min(300, window.innerWidth - 60) : 340;
+                        const container = bubbleRef.current.closest('.scrollbar-hide');
+                        if (container) {
+                            const containerRect = container.getBoundingClientRect();
+                            const bubbleTopInContainer = rect.top - containerRect.top + container.scrollTop;
+                            const targetScroll = bubbleTopInContainer - (viewportHeight / 2) + (bubbleH / 2);
+                            container.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+                        }
+                    }, 50);
+                }
+            }, [isExpanded]);
+
+            if (!hasAppeared) return null;
+
+            const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+            const expandedSize = isMobile ? Math.min(300, window.innerWidth - 60) : 340;
+
+            return (
+                <div
+                    ref={bubbleRef}
+                    className={`mb-3 ${!isExpanded ? 'bubble-appear' : ''}`}
+                    style={{
+                        marginLeft: isExpanded ? '50%' : `${randomLeft}%`,
+                        transform: isExpanded 
+                            ? `translateX(-50%) translate(${offset.x}px, ${offset.y}px)` 
+                            : `translate(${offset.x}px, ${offset.y}px)`,
+                        maxWidth: isExpanded ? `${expandedSize}px` : `${baseSize}px`,
+                        width: isExpanded ? `${expandedSize}px` : 'auto',
+                        position: 'relative',
+                        zIndex: isExpanded ? 1000 : (isDragging ? 999 : 10),
+                        transition: isDragging 
+                            ? 'none' 
+                            : 'margin-left 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), max-width 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    }}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onClick={handleClick}
+                >
+                    <div
+                        className={`bubble ${isExpanded ? 'bubble-expanded' : (isDragging ? 'touch-dragging' : 'bubble-float')}`}
+                        style={{
+                            width: isExpanded ? `${expandedSize}px` : `${baseSize}px`,
+                            height: isExpanded ? `${expandedSize}px` : `${baseSize}px`,
+                            borderRadius: '50%',
+                            background: isExpanded 
+                                ? `radial-gradient(circle at 35% 35%, color-mix(in srgb, ${color.bg}, white 12%) 0%, ${color.bg} 60%, color-mix(in srgb, ${color.bg}, black 15%) 100%)`
+                                : `radial-gradient(circle at 30% 30%, color-mix(in srgb, ${color.bg}, white 20%) 0%, ${color.bg} 50%, color-mix(in srgb, ${color.bg}, black 10%) 100%)`,
+                            boxShadow: isExpanded 
+                                ? `0 25px 80px ${color.glow}, 0 0 60px ${color.glow.replace('0.5', '0.3')}, inset 0 0 0 1.5px rgba(255,255,255,0.15)`
+                                : `0 8px 30px ${color.glow}, inset 0 0 0 1px rgba(255,255,255,0.2)`,
+                            animationDelay: `${animDelay * 0.3}s`,
+                            animationDuration: `${4 + (event.id % 3)}s`,
+                            overflow: 'hidden',
+                            position: 'relative',
+                        }}
+                    >
+                        {/* Kiiltoheijastukset */}
+                        {!isExpanded && (
+                            <>
+                                <div className="bubble-shine" />
+                                <div className="bubble-shine-secondary" />
+                            </>
+                        )}
+                        {isExpanded && (
+                            <div style={{
+                                position: 'absolute', top: '6%', left: '10%',
+                                width: '25%', height: '25%', borderRadius: '50%',
+                                background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
+                                pointerEvents: 'none',
+                            }} />
+                        )}
+
+                        {isExpanded ? (
+                            /* ═══════ LAAJENNETTU KUPLA ═══════ */
+                            <div style={{ 
+                                position: 'absolute', inset: 0,
+                                display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', justifyContent: 'center',
+                                padding: '14%', textAlign: 'center',
+                                overflowY: 'auto',
+                                opacity: contentVisible ? 1 : 0,
+                                transform: contentVisible ? 'scale(1)' : 'scale(0.9)',
+                                transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                            }}>
+                                <div style={{ fontSize: '9px', letterSpacing: '1.5px', opacity: 0.6, marginBottom: '4px', textTransform: 'uppercase', fontWeight: 500 }}>
+                                    {event.subcategory || event.category}
+                                </div>
+                                <h3 style={{ fontSize: expandedSize > 300 ? '1.05rem' : '0.95rem', fontWeight: 700, lineHeight: 1.25, marginBottom: '8px' }}>
+                                    {event.title}
+                                </h3>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.72rem', opacity: 0.9 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+                                        <CalendarIcon className="w-3 h-3" style={{ flexShrink: 0 }} />
+                                        <span>{new Date(event.date).toLocaleDateString('fi-FI', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                                        {event.time && (
+                                            <>
+                                                <span style={{ opacity: 0.4 }}>·</span>
+                                                <ClockIcon className="w-3 h-3" style={{ flexShrink: 0 }} />
+                                                <span>{event.time}</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    {event.venue && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+                                            <MapPinIcon className="w-3 h-3" style={{ flexShrink: 0, opacity: 0.7 }} />
+                                            <span style={{ opacity: 0.75 }}>{event.venue}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {event.price && (
+                                    <div style={{ marginTop: '8px', fontSize: '0.95rem', fontWeight: 700 }}>
+                                        {event.price}
+                                    </div>
+                                )}
+
+                                {/* Toimintopainikkeet */}
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); }}
+                                        style={{
+                                            padding: '7px 16px',
+                                            background: 'rgba(255,255,255,0.2)',
+                                            border: '1px solid rgba(255,255,255,0.25)',
+                                            borderRadius: '20px', color: '#fff',
+                                            fontSize: '0.7rem', fontWeight: 600,
+                                            cursor: 'pointer', display: 'flex',
+                                            alignItems: 'center', gap: '4px',
+                                            fontFamily: 'Outfit',
+                                            transition: 'background 0.2s, transform 0.15s',
+                                        }}
+                                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
+                                        <TicketIcon className="w-3 h-3" /> Liput
+                                    </button>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); }}
+                                        style={{
+                                            padding: '7px 16px',
+                                            background: 'rgba(255,255,255,0.1)',
+                                            border: '1px solid rgba(255,255,255,0.15)',
+                                            borderRadius: '20px', color: '#fff',
+                                            fontSize: '0.7rem', fontWeight: 600,
+                                            cursor: 'pointer', display: 'flex',
+                                            alignItems: 'center', gap: '4px',
+                                            fontFamily: 'Outfit',
+                                            transition: 'background 0.2s, transform 0.15s',
+                                        }}
+                                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
+                                        <ExternalLinkIcon className="w-3 h-3" /> Info
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            /* ═══════ SULJETTU KUPLA ═══════ */
+                            <div style={{
+                                position: 'absolute', inset: 0,
+                                display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', justifyContent: 'center',
+                                padding: '12px', textAlign: 'center',
+                            }}>
+                                <div style={{
+                                    fontWeight: 700,
+                                    fontSize: baseSize < 100 ? '0.7rem' : '0.8rem',
+                                    lineHeight: 1.25,
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                    wordBreak: 'break-word',
+                                    textShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                                }}>
+                                    {event.title.length > 28 ? event.title.substring(0, 28) + '…' : event.title}
+                                </div>
+                                <div style={{ fontSize: '0.6rem', opacity: 0.7, marginTop: '3px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    {event.time && <span>{event.time}</span>}
+                                    {event.time && event.venue && <span style={{ opacity: 0.5 }}>·</span>}
+                                    {event.venue && <span style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.venue.split(',')[0]}</span>}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================================
+        // PÄÄ-KOMPONENTTI
+        // ============================================================
+        const Tahtumii = () => {
+            const [selectedCity, setSelectedCity] = useState('Helsinki');
+            const [selectedCategory, setSelectedCategory] = useState('Kaikki');
+            const [expandedEvent, setExpandedEvent] = useState(null);
+            const [currentScrollDate, setCurrentScrollDate] = useState(null);
+            const [events] = useState(() => generateDemoEvents());
+            const isLoading = false;
+
+            const mainScrollRef = useRef(null);
+            const cityScrollRef = useRef(null);
+            const categoryScrollRef = useRef(null);
+            const preventScrollDateUpdate = useRef(false);
+
+            const cities = ['Helsinki', 'Tampere', 'Turku', 'Oulu'];
+            const categories = ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'];
+
+            const getTodayString = () => {
+                const d = new Date();
+                return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            };
+
+            const filteredEvents = useMemo(() => {
+                return events
+                    .filter(e => e.city === selectedCity)
+                    .filter(e => selectedCategory === 'Kaikki' || e.category === selectedCategory)
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+            }, [events, selectedCity, selectedCategory]);
+
+            const calendarDays = useMemo(() => {
+                const today = new Date();
+                const todayStr = getTodayString();
+                const lastEventDate = filteredEvents.length > 0 
+                    ? new Date(filteredEvents[filteredEvents.length - 1].date)
+                    : new Date(today);
+                const endDate = new Date(lastEventDate);
+                endDate.setDate(endDate.getDate() + 3);
+                if (filteredEvents.length === 0) endDate.setDate(today.getDate() + 14);
+
+                const days = [];
+                const cur = new Date(today);
+                while (cur <= endDate) {
+                    const dateStr = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+                    days.push({ date: dateStr, events: filteredEvents.filter(e => e.date === dateStr) });
+                    cur.setDate(cur.getDate() + 1);
+                }
+                return days;
+            }, [filteredEvents]);
+
+            const handleScroll = useCallback(() => {
+                if (!mainScrollRef.current || preventScrollDateUpdate.current) return;
+                const container = mainScrollRef.current;
+                const containerRect = container.getBoundingClientRect();
+                const centerY = containerRect.height / 2; // Näytön keskikohta
+                const dateElements = container.querySelectorAll('[data-date]');
+                let newDate = null;
+                dateElements.forEach(el => {
+                    const rect = el.getBoundingClientRect();
+                    const relTop = rect.top - containerRect.top;
+                    const relBottom = rect.bottom - containerRect.top;
+                    if (relTop <= centerY && relBottom > centerY) {
+                        newDate = el.getAttribute('data-date');
+                    }
+                });
+                if (newDate && newDate !== currentScrollDate) setCurrentScrollDate(newDate);
+            }, [currentScrollDate]);
+
+            useEffect(() => {
+                if (!currentScrollDate) setCurrentScrollDate(getTodayString());
+            }, []);
+
+            useEffect(() => {
+                if (mainScrollRef.current && calendarDays.length > 0) {
+                    const today = getTodayString();
+                    const el = mainScrollRef.current.querySelector(`[data-date="${today}"]`);
+                    if (el) setTimeout(() => {
+                        const container = mainScrollRef.current;
+                        if (container) {
+                            const containerH = container.clientHeight;
+                            const elH = el.offsetHeight;
+                            const targetScroll = el.offsetTop - (containerH / 2) + (elH / 2);
+                            container.scrollTo({ top: Math.max(0, targetScroll), behavior: 'auto' });
+                        }
+                    }, 100);
+                }
+            }, [selectedCity, selectedCategory]);
+
+            const scrollToCenter = (ref, index) => {
+                if (ref.current) {
+                    const btns = ref.current.querySelectorAll('button');
+                    if (btns[index]) btns[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+            };
+
+            useEffect(() => {
+                setTimeout(() => {
+                    scrollToCenter(cityScrollRef, cities.indexOf(selectedCity));
+                    scrollToCenter(categoryScrollRef, categories.indexOf(selectedCategory));
+                }, 100);
+            }, []);
+
+            const scrollDateToCenter = (dateStr) => {
+                const el = mainScrollRef.current?.querySelector(`[data-date="${dateStr}"]`);
+                const container = mainScrollRef.current;
+                if (el && container) {
+                    const containerH = container.clientHeight;
+                    const elH = el.offsetHeight;
+                    const targetScroll = el.offsetTop - (containerH / 2) + (elH / 2);
+                    container.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+                }
+            };
+
+            const scrollToToday = () => {
+                const today = getTodayString();
+                setCurrentScrollDate(today);
+                preventScrollDateUpdate.current = true;
+                setTimeout(() => { preventScrollDateUpdate.current = false; }, 600);
+                scrollDateToCenter(today);
+            };
+
+            const formatDateHeader = (dateStr) => {
+                if (!dateStr) return {};
+                const d = new Date(dateStr);
+                const weekdays = ['sunnuntai', 'maanantai', 'tiistai', 'keskiviikko', 'torstai', 'perjantai', 'lauantai'];
+                const months = ['tammikuu', 'helmikuu', 'maaliskuu', 'huhtikuu', 'toukokuu', 'kesäkuu', 'heinäkuu', 'elokuu', 'syyskuu', 'lokakuu', 'marraskuu', 'joulukuu'];
+                return { day: d.getDate(), weekday: weekdays[d.getDay()], month: months[d.getMonth()] };
+            };
+
+            const dateInfo = formatDateHeader(currentScrollDate);
+            const weekdaysShort = ['Su', 'Ma', 'Ti', 'Ke', 'To', 'Pe', 'La'];
+            const monthsShort = ['Tam', 'Hel', 'Maa', 'Huh', 'Tou', 'Kes', 'Hei', 'Elo', 'Syy', 'Lok', 'Mar', 'Jou'];
+
+            let bubbleIndex = 0;
+
+            return (
+                <div className="bg-gradient-mesh" style={{ height: '100dvh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+
+                    {/* ====== YLÄPALKKI ====== */}
+                    <div className="top-bar" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', zIndex: 30, flexShrink: 0 }}>
+                        {/* Käyttäjä-ikoni vasemmalle (näkymätön placeholder tasapainoksi) */}
+                        <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }}>
+                            <div style={{ width: '36px' }} />
+                        </div>
+
+                        {/* Logo keskellä */}
+                        <div onClick={scrollToToday} style={{ cursor: 'pointer', textAlign: 'center' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 50%, #F59E0B 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                tahtumii.com
+                            </div>
+                            {isLoading && (
+                                <div style={{ fontSize: '0.55rem', opacity: 0.5, letterSpacing: '1px' }}>Haetaan tapahtumia...</div>
+                            )}
+                        </div>
+
+                        {/* Käyttäjä-ikoni oikealle */}
+                        <button style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <UserIcon className="w-4 h-4 text-white/70" />
+                        </button>
+                    </div>
+
+                    {/* ====== PÄÄSISÄLTÖ ====== */}
+                    <div 
+                        ref={mainScrollRef}
+                        onScroll={handleScroll}
+                        className="scrollbar-hide"
+                        style={{ flex: 1, overflowY: 'auto', paddingBottom: '140px', position: 'relative' }}
+                    >
+                        {/* Iso päivämäärä taustalla */}
+                        <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 0, opacity: 0.04 }}>
+                            <div style={{ fontSize: '12rem', fontWeight: 800, lineHeight: 1, textAlign: 'center' }}>{dateInfo.day}</div>
+                        </div>
+
+                        {/* Aikajanan lasiefekti-tausta (kiinteä oikealla) */}
+                        <div style={{
+                            position: 'fixed', top: '58px', bottom: 0, right: 0,
+                            width: '56px', zIndex: 0, pointerEvents: 'none',
+                            background: 'linear-gradient(180deg, rgba(140,100,240,0.08) 0%, rgba(80,60,180,0.05) 30%, rgba(255,255,255,0.04) 60%, rgba(140,100,240,0.06) 100%)',
+                            backdropFilter: 'blur(24px) saturate(180%)',
+                            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                            borderLeft: '1px solid rgba(255,255,255,0.1)',
+                            boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.08), inset -1px 0 0 rgba(255,255,255,0.02), -8px 0 30px rgba(0,0,0,0.25)'
+                        }} />
+
+                        {/* Päivä-rivit */}
+                        <div style={{ position: 'relative', zIndex: 1 }}>
+                            {calendarDays.map(({ date, events: dayEvents }) => {
+                                const d = new Date(date);
+                                const isActive = date === currentScrollDate;
+                                
+                                // Sekoita kuplat
+                                const shuffled = [...dayEvents].sort((a, b) => {
+                                    const hA = (a.id * 2654435761) % 2147483648;
+                                    const hB = (b.id * 2654435761) % 2147483648;
+                                    return hA - hB;
+                                });
+
+                                return (
+                                    <div key={date} data-date={date} style={{ display: 'flex', alignItems: 'stretch' }}>
+                                        {/* Kupla-sarake — kasvaa sisällön mukaan */}
+                                        <div style={{ flex: 1, paddingLeft: '12px', paddingRight: '8px', paddingTop: '8px', paddingBottom: '8px', minHeight: dayEvents.length === 0 ? '100px' : '120px' }}>
+                                            {shuffled.map((event) => {
+                                                const idx = bubbleIndex++;
+                                                return (
+                                                    <Bubble
+                                                        key={event.id}
+                                                        event={event}
+                                                        isExpanded={expandedEvent === event.id}
+                                                        onToggle={() => setExpandedEvent(expandedEvent === event.id ? null : event.id)}
+                                                        animDelay={idx}
+                                                    />
+                                                );
+                                            })}
+                                            {dayEvents.length === 0 && (
+                                                <div style={{ padding: '30px 20px', textAlign: 'center', opacity: 0.15, fontSize: '0.75rem' }}>
+                                                    ei tapahtumia
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Aikajana-sarake — venyy kuplan mukana */}
+                                        <div 
+                                            style={{ 
+                                                width: '56px', flexShrink: 0,
+                                                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                                justifyContent: 'flex-start', paddingTop: '12px',
+                                                cursor: 'pointer', position: 'relative', zIndex: 3,
+                                                borderBottom: '1px solid rgba(255,255,255,0.04)',
+                                                background: isActive ? 'rgba(139,92,246,0.12)' : 'transparent',
+                                                transition: 'background 0.2s'
+                                            }}
+                                            onClick={() => {
+                                                setCurrentScrollDate(date);
+                                                preventScrollDateUpdate.current = true;
+                                                setTimeout(() => { preventScrollDateUpdate.current = false; }, 600);
+                                                scrollDateToCenter(date);
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '0.55rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                {weekdaysShort[d.getDay()]}
+                                            </div>
+                                            <div className={`timeline-dot ${isActive ? 'active' : ''}`} style={{ fontSize: '1rem', fontWeight: isActive ? 800 : 500, color: isActive ? '#A78BFA' : 'rgba(255,255,255,0.4)', lineHeight: 1.2 }}>
+                                                {d.getDate()}
+                                            </div>
+                                            <div style={{ fontSize: '0.5rem', opacity: 0.4 }}>
+                                                {monthsShort[d.getMonth()]}
+                                            </div>
+                                            {dayEvents.length > 0 && (
+                                                <div style={{ marginTop: '4px', display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                                    {dayEvents.slice(0, 4).map(e => (
+                                                        <div key={e.id} style={{ width: '5px', height: '5px', borderRadius: '50%', background: getColor(e.category, e.subcategory).bg }} />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* ====== ALAPALKKI ====== */}
+                    <div className="bottom-nav" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30 }}>
+                        {/* Kategoriat */}
+                        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', position: 'relative' }}>
+                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '60px', background: 'linear-gradient(to right, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.4) 60%, transparent 100%)', zIndex: 5, pointerEvents: 'none' }} />
+                            <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '60px', background: 'linear-gradient(to left, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.4) 60%, transparent 100%)', zIndex: 5, pointerEvents: 'none' }} />
+                            <div ref={categoryScrollRef} className="scrollbar-hide" style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '10px 16px', scrollSnapType: 'x mandatory', scrollBehavior: 'smooth', scrollPaddingLeft: '50%', scrollPaddingRight: '50%' }}>
+                                <div style={{ flexShrink: 0, width: 'calc(50vw - 60px)' }} />
+                                {categories.map((cat, idx) => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => { setSelectedCategory(cat); scrollToCenter(categoryScrollRef, idx); setExpandedEvent(null); }}
+                                        style={{
+                                            flexShrink: 0, padding: '6px 16px',
+                                            borderRadius: '20px', border: 'none',
+                                            fontSize: '0.8rem', fontWeight: selectedCategory === cat ? 600 : 400,
+                                            fontFamily: 'Outfit',
+                                            background: selectedCategory === cat ? 'rgba(139,92,246,0.8)' : 'rgba(255,255,255,0.06)',
+                                            color: selectedCategory === cat ? '#fff' : 'rgba(255,255,255,0.45)',
+                                            cursor: 'pointer', scrollSnapAlign: 'center',
+                                            transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                            boxShadow: selectedCategory === cat ? '0 0 20px rgba(139,92,246,0.4)' : 'none',
+                                            transform: selectedCategory === cat ? 'scale(1.05)' : 'scale(1)'
+                                        }}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                                <div style={{ flexShrink: 0, width: 'calc(50vw - 60px)' }} />
+                            </div>
+                        </div>
+
+                        {/* Kaupungit */}
+                        <div style={{ position: 'relative' }}>
+                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '60px', background: 'linear-gradient(to right, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.4) 60%, transparent 100%)', zIndex: 5, pointerEvents: 'none' }} />
+                            <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '60px', background: 'linear-gradient(to left, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.4) 60%, transparent 100%)', zIndex: 5, pointerEvents: 'none' }} />
+                            <div ref={cityScrollRef} className="scrollbar-hide" style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '10px 16px', paddingBottom: '14px', scrollSnapType: 'x mandatory', scrollBehavior: 'smooth', scrollPaddingLeft: '50%', scrollPaddingRight: '50%' }}>
+                                <div style={{ flexShrink: 0, width: 'calc(50vw - 60px)' }} />
+                                {cities.map((city, idx) => (
+                                    <button
+                                        key={city}
+                                        onClick={() => { setSelectedCity(city); scrollToCenter(cityScrollRef, idx); setExpandedEvent(null); }}
+                                        style={{
+                                            flexShrink: 0, padding: '6px 16px',
+                                            borderRadius: '20px', border: 'none',
+                                            fontSize: '0.8rem', fontWeight: selectedCity === city ? 600 : 400,
+                                            fontFamily: 'Outfit',
+                                            background: selectedCity === city ? 'rgba(59,130,246,0.7)' : 'rgba(255,255,255,0.06)',
+                                            color: selectedCity === city ? '#fff' : 'rgba(255,255,255,0.45)',
+                                            cursor: 'pointer', scrollSnapAlign: 'center',
+                                            transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                            boxShadow: selectedCity === city ? '0 0 20px rgba(59,130,246,0.4)' : 'none',
+                                            transform: selectedCity === city ? 'scale(1.05)' : 'scale(1)'
+                                        }}
+                                    >
+                                        {city}
+                                    </button>
+                                ))}
+                                <div style={{ flexShrink: 0, width: 'calc(50vw - 60px)' }} />
+                            </div>
+                        </div>
+
+                        {/* Safe area bottom (iPhone) */}
+                        <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
+                    </div>
+
+                    {/* Klikkialue kuplan sulkemiseen */}
+                    {expandedEvent && (
+                        <div 
+                            onClick={() => setExpandedEvent(null)}
+                            style={{ position: 'fixed', inset: 0, zIndex: 5 }}
+                        />
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Tahtumii />);
+    </script>
+</body>
+</html>
