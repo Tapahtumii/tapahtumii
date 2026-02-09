@@ -1017,14 +1017,22 @@
         // ============================================================
         const SUPABASE_URL = 'https://datrllrahxwlygnzlnrr.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhdHJsbHJhaHh3bHlnbnpsbnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NjAxMjIsImV4cCI6MjA4NjIzNjEyMn0.QaBI4aFDuJsdnX0oMgrFCmaU2C-rKulTlmbYd5ONBzw';
-        let supabaseClient;
+        let sb;
         try {
-            supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+            const _sb = window.supabase;
+            if (_sb && _sb.createClient) {
+                sb = _sb.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } else if (_sb && _sb.supabase && _sb.supabase.createClient) {
+                sb = _sb.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } else {
+                console.error('[Tapahtumii] Supabase kirjastoa ei löydy. window.supabase =', _sb);
+                sb = null;
+            }
         } catch(e) {
-            console.warn('[Tapahtumii] Supabase ei latautunut:', e);
-            supabaseClient = null;
+            console.error('[Tapahtumii] Supabase virhe:', e);
+            sb = null;
         }
-        const sb = supabaseClient;
+        console.log('[Tapahtumii] Supabase yhteys:', sb ? 'OK' : 'EI YHTEYTTÄ');
 
         // ============================================================
         // KIRJAUTUMIS-MODAALI
@@ -1042,33 +1050,51 @@
 
             const handleLogin = async (e) => {
                 e.preventDefault();
+                if (!sb) { setError('Tietokantayhteyttä ei voitu muodostaa. Lataa sivu uudelleen.'); return; }
                 setError(''); setLoading(true);
-                const { data, error: err } = await sb.auth.signInWithPassword({ email, password });
-                setLoading(false);
-                if (err) { setError(err.message); return; }
-                onAuth(data.user);
-                onClose();
+                try {
+                    const { data, error: err } = await sb.auth.signInWithPassword({ email, password });
+                    setLoading(false);
+                    if (err) { setError(err.message); return; }
+                    onAuth(data.user);
+                    onClose();
+                } catch(ex) {
+                    setLoading(false);
+                    setError('Yhteysvirhe: ' + ex.message);
+                }
             };
 
             const handleRegister = async (e) => {
                 e.preventDefault();
+                if (!sb) { setError('Tietokantayhteyttä ei voitu muodostaa.'); return; }
                 setError(''); setLoading(true);
-                const { data, error: err } = await sb.auth.signUp({
-                    email, password,
-                    options: { data: { full_name: displayName } }
-                });
-                setLoading(false);
-                if (err) { setError(err.message); return; }
-                setMessage('Tarkista sähköpostisi ja vahvista tili!');
+                try {
+                    const { data, error: err } = await sb.auth.signUp({
+                        email, password,
+                        options: { data: { full_name: displayName } }
+                    });
+                    setLoading(false);
+                    if (err) { setError(err.message); return; }
+                    setMessage('Tarkista sähköpostisi ja vahvista tili!');
+                } catch(ex) {
+                    setLoading(false);
+                    setError('Yhteysvirhe: ' + ex.message);
+                }
             };
 
             const handleMagicLink = async (e) => {
                 e.preventDefault();
+                if (!sb) { setError('Tietokantayhteyttä ei voitu muodostaa.'); return; }
                 setError(''); setLoading(true);
-                const { error: err } = await sb.auth.signInWithOtp({ email });
-                setLoading(false);
-                if (err) { setError(err.message); return; }
-                setMessage('Kirjautumislinkki lähetetty sähköpostiisi!');
+                try {
+                    const { error: err } = await sb.auth.signInWithOtp({ email });
+                    setLoading(false);
+                    if (err) { setError(err.message); return; }
+                    setMessage('Kirjautumislinkki lähetetty sähköpostiisi!');
+                } catch(ex) {
+                    setLoading(false);
+                    setError('Yhteysvirhe: ' + ex.message);
+                }
             };
 
             const inputStyle = {
