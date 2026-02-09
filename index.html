@@ -1256,7 +1256,7 @@
                                             <div className={`timeline-dot ${isActive ? 'active' : ''}`} style={{ fontSize: '1rem', fontWeight: isActive ? 800 : 500, color: isActive ? '#A78BFA' : 'rgba(255,255,255,0.4)', lineHeight: 1.2 }}>
                                                 {d.getDate()}
                                             </div>
-                                            <div style={{ fontSize: '0.5rem', opacity: 0.4 }}>
+                                            <div style={{ fontSize: '0.55rem', opacity: isActive ? 0.7 : 0.5, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: isActive ? 600 : 400 }}>
                                                 {monthsShort[d.getMonth()]}
                                             </div>
                                             {dayEvents.length > 0 && (
