@@ -1339,8 +1339,8 @@
             const [selectedCategory, setSelectedCategory] = useState('Kaikki');
             const [expandedEvent, setExpandedEvent] = useState(null);
             const [currentScrollDate, setCurrentScrollDate] = useState(null);
-            const [events, setEvents] = useState([]);
-            const [isLoading, setIsLoading] = useState(true);
+            const [events, setEvents] = useState(() => generateDemoEvents());
+            const [isLoading, setIsLoading] = useState(false);
 
             // Auth state
             const [user, setUser] = useState(null);
@@ -1380,25 +1380,15 @@
                 if (data) setUserProfile(data);
             };
 
-            // Hae tapahtumat: demo heti, live päälle
+            // Hae live-data taustalla (korvaa demon jos onnistuu)
             useEffect(() => {
-                // Näytä demo-data heti
-                setEvents(generateDemoEvents());
-                setIsLoading(false);
-
-                // Hae live-data taustalla
                 const loadLive = async () => {
                     let liveEvents = [];
-
-                    // 1. Linked Events API:t
                     try {
                         const apiEvents = await fetchAllEvents();
                         if (apiEvents.length > 0) liveEvents = apiEvents;
-                    } catch(e) {
-                        console.warn('[Tapahtumii] Live-haku:', e);
-                    }
+                    } catch(e) {}
 
-                    // 2. Supabase (käyttäjien lisäämät)
                     if (sb) {
                         try {
                             const today = new Date().toISOString().split('T')[0];
@@ -1424,14 +1414,11 @@
                                 }));
                                 liveEvents = [...liveEvents, ...mapped];
                             }
-                        } catch(e) {
-                            console.warn('[Tapahtumii] Supabase-haku:', e);
-                        }
+                        } catch(e) {}
                     }
 
-                    // Korvaa demo live-datalla jos saatiin tuloksia
                     if (liveEvents.length > 0) {
-                        console.log(`[Tapahtumii] ${liveEvents.length} live-tapahtumaa ladattu`);
+                        console.log(`[Tapahtumii] ${liveEvents.length} live-tapahtumaa`);
                         setEvents(liveEvents);
                     }
                 };
