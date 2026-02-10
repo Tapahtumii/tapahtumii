@@ -758,12 +758,11 @@
         // ============================================================
         // BUBBLE-KOMPONENTTI — touch-interaktiot
         // ============================================================
-        const Bubble = React.memo(({ event, isExpanded, onToggle, animDelay }) => {
+        const Bubble = React.memo(({ event, isExpanded, onToggle, eventId, animDelay }) => {
             const bubbleRef = useRef(null);
             const dragState = useRef({ isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, velocityX: 0, lastX: 0, lastTime: 0 });
             const [offset, setOffset] = useState({ x: 0, y: 0 });
             const [isDragging, setIsDragging] = useState(false);
-            const [hasAppeared, setHasAppeared] = useState(false);
             const [contentVisible, setContentVisible] = useState(false);
 
             const color = getColor(event.category, event.subcategory);
@@ -778,10 +777,8 @@
             // Satunnainen vaaka-asema
             const randomLeft = ((numId * 31 + numId * 11 + numId * 67) % 65);
 
-            useEffect(() => {
-                const timer = setTimeout(() => setHasAppeared(true), animDelay * 80);
-                return () => clearTimeout(timer);
-            }, [animDelay]);
+            // Cap animation delay to avoid excessive stagger
+            const cappedDelay = Math.min(animDelay, 15);
 
             // Viivästetty sisältö — näytä vasta kun kupla on laajentunut
             useEffect(() => {
@@ -840,13 +837,13 @@
                     setOffset({ x: 0, y: 0 });
                     setTimeout(() => { dragState.current.isDragging = false; }, 100);
                 } else {
-                    onToggle();
+                    onToggle(prev => prev === eventId ? null : eventId);
                 }
-            }, [onToggle]);
+            }, [onToggle, eventId]);
 
             const handleClick = useCallback((e) => {
-                if (!('ontouchstart' in window)) onToggle();
-            }, [onToggle]);
+                if (!('ontouchstart' in window)) onToggle(prev => prev === eventId ? null : eventId);
+            }, [onToggle, eventId]);
 
             // Scroll kupla keskelle kun se laajenee
             useEffect(() => {
@@ -868,8 +865,6 @@
                 }
             }, [isExpanded]);
 
-            if (!hasAppeared) return null;
-
             const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
             const expandedSize = isMobile ? Math.min(300, window.innerWidth - 60) : 340;
 
@@ -879,6 +874,7 @@
                     className={`mb-3 ${!isExpanded ? 'bubble-appear' : ''}`}
                     style={{
                         marginLeft: isExpanded ? '50%' : `${randomLeft}%`,
+                        animationDelay: !isExpanded ? `${cappedDelay * 0.04}s` : undefined,
                         transform: isExpanded 
                             ? `translateX(-50%) translate(${offset.x}px, ${offset.y}px)` 
                             : `translate(${offset.x}px, ${offset.y}px)`,
@@ -1473,7 +1469,6 @@
             const [isLoading, setIsLoading] = useState(true);
             const [dataSource, setDataSource] = useState('demo'); // 'demo' | 'live'
             const [loadingDone, setLoadingDone] = useState(false);
-            const [visibleDays, setVisibleDays] = useState(7); // Progressive rendering
 
             // Auth state
             const [user, setUser] = useState(null);
@@ -1531,18 +1526,15 @@
             // Hae Supabase-tapahtumat
             const refreshDbEvents = async () => {
                 const finishLoading = (evts, src) => {
-                    setVisibleDays(7); // Start with 7 days
                     setEvents(evts);
                     setDataSource(src);
                     setIsLoading(false);
-                    // After loading screen fades, progressively show more days
-                    setTimeout(() => {
-                        setLoadingDone(true);
-                        // Load remaining days in chunks to avoid jank
-                        setTimeout(() => setVisibleDays(30), 100);
-                        setTimeout(() => setVisibleDays(90), 300);
-                        setTimeout(() => setVisibleDays(999), 600);
-                    }, 500); // matches fade-out duration
+                    // Fade out loading screen after React has rendered
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            setLoadingDone(true);
+                        });
+                    });
                 };
 
                 if (!sb) { 
@@ -1649,11 +1641,9 @@
                         days.push({ date: dateStr, events: dayEvents });
                     }
                     cur.setDate(cur.getDate() + 1);
-                    // Progressive rendering: limit to visibleDays
-                    if (days.length >= visibleDays) break;
                 }
                 return days;
-            }, [filteredEvents, visibleDays]);
+            }, [filteredEvents]);
 
             const handleScroll = useCallback(() => {
                 if (!mainScrollRef.current || preventScrollDateUpdate.current) return;
@@ -1857,7 +1847,8 @@
                                                         key={event.id}
                                                         event={event}
                                                         isExpanded={expandedEvent === event.id}
-                                                        onToggle={() => setExpandedEvent(expandedEvent === event.id ? null : event.id)}
+                                                        onToggle={setExpandedEvent}
+                                                        eventId={event.id}
                                                         animDelay={idx}
                                                     />
                                                 );
@@ -1926,7 +1917,7 @@
                                 {categories.map((cat, idx) => (
                                     <button
                                         key={cat}
-                                        onClick={() => { setSelectedCategory(cat); scrollToCenter(categoryScrollRef, idx); setExpandedEvent(null); setVisibleDays(7); setTimeout(() => setVisibleDays(30), 50); setTimeout(() => setVisibleDays(90), 200); setTimeout(() => setVisibleDays(999), 500); }}
+                                        onClick={() => { setSelectedCategory(cat); scrollToCenter(categoryScrollRef, idx); setExpandedEvent(null); }}
                                         style={{
                                             flexShrink: 0, padding: '6px 16px',
                                             borderRadius: '20px', border: 'none',
@@ -1956,7 +1947,7 @@
                                 {cities.map((city, idx) => (
                                     <button
                                         key={city}
-                                        onClick={() => { setSelectedCity(city); scrollToCenter(cityScrollRef, idx); setExpandedEvent(null); setVisibleDays(7); setTimeout(() => setVisibleDays(30), 50); setTimeout(() => setVisibleDays(90), 200); setTimeout(() => setVisibleDays(999), 500); }}
+                                        onClick={() => { setSelectedCity(city); scrollToCenter(cityScrollRef, idx); setExpandedEvent(null); }}
                                         style={{
                                             flexShrink: 0, padding: '6px 16px',
                                             borderRadius: '20px', border: 'none',
