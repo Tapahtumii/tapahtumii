@@ -116,11 +116,13 @@
             cursor: pointer;
             touch-action: none;
             user-select: none;
-            transition: border-radius 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
-                        width 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
-                        height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
-                        box-shadow 0.45s ease,
-                        background 0.4s ease;
+            transition: border-radius 0.3s ease-out,
+                        width 0.3s ease-out,
+                        height 0.3s ease-out,
+                        box-shadow 0.3s ease,
+                        background 0.3s ease;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
         }
 
         .bubble:active:not(.bubble-expanded) {
@@ -183,9 +185,9 @@
 
         /* Alapalkki */
         .bottom-nav {
-            backdrop-filter: blur(30px) saturate(180%);
-            -webkit-backdrop-filter: blur(30px) saturate(180%);
-            background: linear-gradient(180deg, rgba(10, 10, 18, 0.6) 0%, rgba(10, 10, 18, 0.9) 100%);
+            backdrop-filter: blur(16px) saturate(150%);
+            -webkit-backdrop-filter: blur(16px) saturate(150%);
+            background: linear-gradient(180deg, rgba(10, 10, 18, 0.75) 0%, rgba(10, 10, 18, 0.95) 100%);
             border-top: 1px solid rgba(255,255,255,0.06);
         }
         .bottom-nav::before {
@@ -201,15 +203,15 @@
 
         /* Yläpalkki */
         .top-bar {
-            backdrop-filter: blur(20px) saturate(150%);
-            -webkit-backdrop-filter: blur(20px) saturate(150%);
-            background: rgba(10, 10, 18, 0.7);
+            backdrop-filter: blur(16px) saturate(150%);
+            -webkit-backdrop-filter: blur(16px) saturate(150%);
+            background: rgba(10, 10, 18, 0.8);
             border-bottom: 1px solid rgba(255,255,255,0.06);
         }
 
         /* Scroll-indikaattori */
         .timeline-dot {
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: all 0.2s ease-out;
         }
         .timeline-dot.active {
             transform: scale(1.4);
@@ -217,8 +219,8 @@
 
         /* Modaalit */
         .modal-overlay {
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
 
         /* Touch feedback */
@@ -1731,8 +1733,8 @@
                             position: 'fixed', top: '58px', bottom: 0, right: 0,
                             width: '56px', zIndex: 0, pointerEvents: 'none',
                             background: 'linear-gradient(180deg, rgba(140,100,240,0.08) 0%, rgba(80,60,180,0.05) 30%, rgba(255,255,255,0.04) 60%, rgba(140,100,240,0.06) 100%)',
-                            backdropFilter: 'blur(24px) saturate(180%)',
-                            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                            backdropFilter: 'blur(12px) saturate(150%)',
+                            WebkitBackdropFilter: 'blur(12px) saturate(150%)',
                             borderLeft: '1px solid rgba(255,255,255,0.1)',
                             boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.08), inset -1px 0 0 rgba(255,255,255,0.02), -8px 0 30px rgba(0,0,0,0.25)'
                         }} />
