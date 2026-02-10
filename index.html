@@ -736,12 +736,15 @@
 
             const color = getColor(event.category, event.subcategory);
             
+            // Hash id → numero (toimii sekä numero- että merkkijono-id:illä)
+            const numId = (() => { let h = 0; const s = String(event.id); for(let i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; } return Math.abs(h) || 1; })();
+            
             // Kupla koko — satunnainen perustuen id:hen
-            const sizeVar = (event.id * 13) % 4;
+            const sizeVar = numId % 4;
             const baseSize = 85 + sizeVar * 18;
 
             // Satunnainen vaaka-asema
-            const randomLeft = ((event.id * 31 + event.id * event.id * 11 + event.id * 67) % 65);
+            const randomLeft = ((numId * 31 + numId * 11 + numId * 67) % 65);
 
             useEffect(() => {
                 const timer = setTimeout(() => setHasAppeared(true), animDelay * 80);
@@ -1722,9 +1725,8 @@
                                 
                                 // Sekoita kuplat
                                 const shuffled = [...dayEvents].sort((a, b) => {
-                                    const hA = (a.id * 2654435761) % 2147483648;
-                                    const hB = (b.id * 2654435761) % 2147483648;
-                                    return hA - hB;
+                                    const hashStr = (s) => { let h = 0; const str = String(s); for(let i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0; } return Math.abs(h); };
+                                    return hashStr(a.id) - hashStr(b.id);
                                 });
 
                                 return (
