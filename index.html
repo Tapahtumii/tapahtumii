@@ -99,6 +99,36 @@
             100% { transform: scale(1); }
         }
 
+        @keyframes loadingPulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 1; }
+        }
+
+        @keyframes loadingFadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; pointer-events: none; }
+        }
+
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, #0a0a12 0%, #0d0d1a 100%);
+            gap: 28px;
+        }
+
+        .loading-screen.fade-out {
+            animation: loadingFadeOut 0.5s ease-out forwards;
+        }
+
+        .loading-screen.hidden {
+            display: none;
+        }
+
         .bubble-float {
             animation: bubbleFloat 5s ease-in-out infinite;
             will-change: transform;
@@ -1439,9 +1469,10 @@
             const [selectedCategory, setSelectedCategory] = useState('Kaikki');
             const [expandedEvent, setExpandedEvent] = useState(null);
             const [currentScrollDate, setCurrentScrollDate] = useState(null);
-            const [events, setEvents] = useState(() => generateDemoEvents());
+            const [events, setEvents] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [dataSource, setDataSource] = useState('demo'); // 'demo' | 'live'
+            const [loadingDone, setLoadingDone] = useState(false);
 
             // Auth state
             const [user, setUser] = useState(null);
@@ -1498,7 +1529,18 @@
 
             // Hae Supabase-tapahtumat
             const refreshDbEvents = async () => {
-                if (!sb) { setIsLoading(false); return; }
+                const finishLoading = (evts, src) => {
+                    setEvents(evts);
+                    setDataSource(src);
+                    setIsLoading(false);
+                    // Small delay so React renders content before fade starts
+                    setTimeout(() => setLoadingDone(true), 50);
+                };
+
+                if (!sb) { 
+                    finishLoading(generateDemoEvents(), 'demo');
+                    return; 
+                }
                 try {
                     const today = new Date().toISOString().split('T')[0];
                     console.log('[Tapahtumii] Haetaan DB-tapahtumat...');
@@ -1511,11 +1553,11 @@
                     
                     if (error) { 
                         console.warn('[Tapahtumii] DB virhe:', error.message);
-                        setIsLoading(false);
+                        finishLoading(generateDemoEvents(), 'demo');
                         return; 
                     }
                     
-                    if (data && data.length > 0) {
+                    if (data && data.length >= 10) {
                         const mapped = data.map(e => ({
                             id: 'db-' + e.id,
                             title: e.title,
@@ -1531,23 +1573,14 @@
                             imageUrl: e.image_url,
                             source: e.source,
                         }));
-                        
-                        if (mapped.length >= 10) {
-                            console.log(`[Tapahtumii] ${mapped.length} live-tapahtumaa, demo korvattu`);
-                            setEvents(mapped);
-                            setDataSource('live');
-                        } else {
-                            console.log(`[Tapahtumii] ${mapped.length} live + demo`);
-                            setEvents(prev => {
-                                const demoOnly = prev.filter(e => !String(e.id).startsWith('db-'));
-                                return [...mapped, ...demoOnly];
-                            });
-                        }
+                        console.log(`[Tapahtumii] ${mapped.length} live-tapahtumaa`);
+                        finishLoading(mapped, 'live');
+                    } else {
+                        finishLoading(generateDemoEvents(), 'demo');
                     }
-                    setIsLoading(false);
                 } catch(e) { 
                     console.error('[Tapahtumii] DB haku:', e);
-                    setIsLoading(false);
+                    finishLoading(generateDemoEvents(), 'demo');
                 }
             };
 
@@ -1700,6 +1733,42 @@
             return (
                 <div className="bg-gradient-mesh" style={{ height: '100dvh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
 
+                    {/* ====== LOADING SCREEN ====== */}
+                    {!loadingDone && (
+                        <div className={`loading-screen ${!isLoading ? 'fade-out' : ''}`}
+                             onAnimationEnd={() => setLoadingDone(true)}>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                {[0, 1, 2, 3, 4].map(i => (
+                                    <div key={i} style={{
+                                        width: `${28 + i * 8}px`, height: `${28 + i * 8}px`,
+                                        borderRadius: '50%',
+                                        background: [
+                                            'linear-gradient(135deg, #7C3AED, #A78BFA)',
+                                            'linear-gradient(135deg, #EC4899, #F472B6)',
+                                            'linear-gradient(135deg, #F59E0B, #FBBF24)',
+                                            'linear-gradient(135deg, #3B82F6, #60A5FA)',
+                                            'linear-gradient(135deg, #10B981, #34D399)',
+                                        ][i],
+                                        animation: `loadingPulse 1.6s ease-in-out ${i * 0.2}s infinite, bubbleFloat ${3 + i * 0.5}s ease-in-out ${i * 0.3}s infinite`,
+                                        boxShadow: `0 8px 25px ${[
+                                            'rgba(124,58,237,0.4)',
+                                            'rgba(236,72,153,0.4)',
+                                            'rgba(245,158,11,0.4)',
+                                            'rgba(59,130,246,0.4)',
+                                            'rgba(16,185,129,0.4)',
+                                        ][i]}`,
+                                    }} />
+                                ))}
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 50%, #F59E0B 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '12px' }}>
+                                    tapahtumii.com
+                                </div>
+                                <div style={{ opacity: 0.4, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Haetaan tapahtumia...</div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* ====== YLÄPALKKI ====== */}
                     <div className="top-bar" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', zIndex: 30, flexShrink: 0 }}>
                         {/* Käyttäjä-ikoni vasemmalle — Lisää tapahtuma */}
@@ -1714,9 +1783,6 @@
                             <div style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 50%, #F59E0B 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                                 tapahtumii.com
                             </div>
-                            {isLoading && (
-                                <div style={{ fontSize: '0.55rem', opacity: 0.5, letterSpacing: '1px' }}>Haetaan tapahtumia...</div>
-                            )}
                             {/* Debug-info poistettu */}
                         </div>
 
