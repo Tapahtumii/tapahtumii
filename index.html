@@ -1676,6 +1676,9 @@
                             {isLoading && (
                                 <div style={{ fontSize: '0.55rem', opacity: 0.5, letterSpacing: '1px' }}>Haetaan tapahtumia...</div>
                             )}
+                            <div style={{ fontSize: '0.5rem', opacity: 0.3 }}>
+                                {events.filter(e => String(e.id).startsWith('db-')).length} db / {events.length} yht / {selectedCity}
+                            </div>
                         </div>
 
                         {/* Käyttäjä-ikoni oikealle */}
