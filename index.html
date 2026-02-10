@@ -1439,9 +1439,9 @@
             const [selectedCategory, setSelectedCategory] = useState('Kaikki');
             const [expandedEvent, setExpandedEvent] = useState(null);
             const [currentScrollDate, setCurrentScrollDate] = useState(null);
-            const [events, setEvents] = useState([]);
+            const [events, setEvents] = useState(() => generateDemoEvents());
             const [isLoading, setIsLoading] = useState(true);
-            const [dataSource, setDataSource] = useState('loading'); // 'loading' | 'demo' | 'live'
+            const [dataSource, setDataSource] = useState('demo'); // 'demo' | 'live'
 
             // Auth state
             const [user, setUser] = useState(null);
@@ -1498,12 +1498,7 @@
 
             // Hae Supabase-tapahtumat
             const refreshDbEvents = async () => {
-                if (!sb) { 
-                    setEvents(generateDemoEvents());
-                    setDataSource('demo');
-                    setIsLoading(false); 
-                    return; 
-                }
+                if (!sb) { setIsLoading(false); return; }
                 try {
                     const today = new Date().toISOString().split('T')[0];
                     console.log('[Tapahtumii] Haetaan DB-tapahtumat...');
@@ -1516,8 +1511,6 @@
                     
                     if (error) { 
                         console.warn('[Tapahtumii] DB virhe:', error.message);
-                        setEvents(generateDemoEvents());
-                        setDataSource('demo');
                         setIsLoading(false);
                         return; 
                     }
@@ -1539,18 +1532,21 @@
                             source: e.source,
                         }));
                         
-                        console.log(`[Tapahtumii] ${mapped.length} live-tapahtumaa`);
-                        setEvents(mapped);
-                        setDataSource('live');
-                    } else {
-                        setEvents(generateDemoEvents());
-                        setDataSource('demo');
+                        if (mapped.length >= 10) {
+                            console.log(`[Tapahtumii] ${mapped.length} live-tapahtumaa, demo korvattu`);
+                            setEvents(mapped);
+                            setDataSource('live');
+                        } else {
+                            console.log(`[Tapahtumii] ${mapped.length} live + demo`);
+                            setEvents(prev => {
+                                const demoOnly = prev.filter(e => !String(e.id).startsWith('db-'));
+                                return [...mapped, ...demoOnly];
+                            });
+                        }
                     }
                     setIsLoading(false);
                 } catch(e) { 
                     console.error('[Tapahtumii] DB haku:', e);
-                    setEvents(generateDemoEvents());
-                    setDataSource('demo');
                     setIsLoading(false);
                 }
             };
@@ -1741,25 +1737,7 @@
                         className="scrollbar-hide"
                         style={{ flex: 1, overflowY: 'auto', paddingBottom: '140px', position: 'relative' }}
                     >
-                        {/* Latausnäkymä */}
-                        {isLoading && events.length === 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '20px' }}>
-                                <div style={{ display: 'flex', gap: '12px' }}>
-                                    {[0, 1, 2].map(i => (
-                                        <div key={i} style={{
-                                            width: `${40 + i * 10}px`, height: `${40 + i * 10}px`,
-                                            borderRadius: '50%',
-                                            background: ['linear-gradient(135deg, #A78BFA, #7C3AED)', 'linear-gradient(135deg, #EC4899, #BE185D)', 'linear-gradient(135deg, #F59E0B, #D97706)'][i],
-                                            animation: `bubbleAppear 0.6s ease-out ${i * 0.2}s both, bubbleFloat ${3 + i}s ease-in-out ${i * 0.3}s infinite`,
-                                            boxShadow: `0 8px 30px ${['rgba(167,139,250,0.4)', 'rgba(236,72,153,0.4)', 'rgba(245,158,11,0.4)'][i]}`,
-                                        }} />
-                                    ))}
-                                </div>
-                                <div style={{ opacity: 0.5, fontSize: '0.85rem', letterSpacing: '0.5px' }}>Haetaan tapahtumia...</div>
-                            </div>
-                        )}
                         {/* Iso päivämäärä taustalla */}
-                        <div style={{ display: events.length > 0 ? 'block' : 'none' }}>
                         <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 0, opacity: 0.04 }}>
                             <div style={{ fontSize: '12rem', fontWeight: 800, lineHeight: 1, textAlign: 'center' }}>{dateInfo.day}</div>
                         </div>
@@ -1859,7 +1837,6 @@
                                 );
                             })}
                         </div>
-                    </div>
                     </div>
 
                     {/* ====== ALAPALKKI ====== */}
