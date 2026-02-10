@@ -1759,7 +1759,7 @@
                             </div>
                         )}
                         {/* Iso päivämäärä taustalla */}
-                        {events.length > 0 && <React.Fragment>
+                        <div style={{ display: events.length > 0 ? 'block' : 'none' }}>
                         <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 0, opacity: 0.04 }}>
                             <div style={{ fontSize: '12rem', fontWeight: 800, lineHeight: 1, textAlign: 'center' }}>{dateInfo.day}</div>
                         </div>
@@ -1860,7 +1860,7 @@
                             })}
                         </div>
                     </div>
-                    </React.Fragment>}
+                    </div>
 
                     {/* ====== ALAPALKKI ====== */}
                     <div className="bottom-nav" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30 }}>
