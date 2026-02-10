@@ -1473,6 +1473,7 @@
             const [isLoading, setIsLoading] = useState(true);
             const [dataSource, setDataSource] = useState('demo'); // 'demo' | 'live'
             const [loadingDone, setLoadingDone] = useState(false);
+            const [visibleDays, setVisibleDays] = useState(7); // Progressive rendering
 
             // Auth state
             const [user, setUser] = useState(null);
@@ -1530,11 +1531,18 @@
             // Hae Supabase-tapahtumat
             const refreshDbEvents = async () => {
                 const finishLoading = (evts, src) => {
+                    setVisibleDays(7); // Start with 7 days
                     setEvents(evts);
                     setDataSource(src);
                     setIsLoading(false);
-                    // Small delay so React renders content before fade starts
-                    setTimeout(() => setLoadingDone(true), 50);
+                    // After loading screen fades, progressively show more days
+                    setTimeout(() => {
+                        setLoadingDone(true);
+                        // Load remaining days in chunks to avoid jank
+                        setTimeout(() => setVisibleDays(30), 100);
+                        setTimeout(() => setVisibleDays(90), 300);
+                        setTimeout(() => setVisibleDays(999), 600);
+                    }, 500); // matches fade-out duration
                 };
 
                 if (!sb) { 
@@ -1641,9 +1649,11 @@
                         days.push({ date: dateStr, events: dayEvents });
                     }
                     cur.setDate(cur.getDate() + 1);
+                    // Progressive rendering: limit to visibleDays
+                    if (days.length >= visibleDays) break;
                 }
                 return days;
-            }, [filteredEvents]);
+            }, [filteredEvents, visibleDays]);
 
             const handleScroll = useCallback(() => {
                 if (!mainScrollRef.current || preventScrollDateUpdate.current) return;
@@ -1832,7 +1842,7 @@
                                 });
 
                                 const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
-                                const maxBubbles = isMobileView ? 12 : 20;
+                                const maxBubbles = isMobileView ? 8 : 20;
                                 const showMore = shuffled.length > maxBubbles;
                                 const visibleBubbles = shuffled.slice(0, maxBubbles);
 
@@ -1916,7 +1926,7 @@
                                 {categories.map((cat, idx) => (
                                     <button
                                         key={cat}
-                                        onClick={() => { setSelectedCategory(cat); scrollToCenter(categoryScrollRef, idx); setExpandedEvent(null); }}
+                                        onClick={() => { setSelectedCategory(cat); scrollToCenter(categoryScrollRef, idx); setExpandedEvent(null); setVisibleDays(7); setTimeout(() => setVisibleDays(30), 50); setTimeout(() => setVisibleDays(90), 200); setTimeout(() => setVisibleDays(999), 500); }}
                                         style={{
                                             flexShrink: 0, padding: '6px 16px',
                                             borderRadius: '20px', border: 'none',
@@ -1946,7 +1956,7 @@
                                 {cities.map((city, idx) => (
                                     <button
                                         key={city}
-                                        onClick={() => { setSelectedCity(city); scrollToCenter(cityScrollRef, idx); setExpandedEvent(null); }}
+                                        onClick={() => { setSelectedCity(city); scrollToCenter(cityScrollRef, idx); setExpandedEvent(null); setVisibleDays(7); setTimeout(() => setVisibleDays(30), 50); setTimeout(() => setVisibleDays(90), 200); setTimeout(() => setVisibleDays(999), 500); }}
                                         style={{
                                             flexShrink: 0, padding: '6px 16px',
                                             borderRadius: '20px', border: 'none',
