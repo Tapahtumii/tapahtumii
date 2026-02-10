@@ -1436,7 +1436,8 @@
             const [expandedEvent, setExpandedEvent] = useState(null);
             const [currentScrollDate, setCurrentScrollDate] = useState(null);
             const [events, setEvents] = useState(() => generateDemoEvents());
-            const [isLoading, setIsLoading] = useState(false);
+            const [isLoading, setIsLoading] = useState(true);
+            const [dataSource, setDataSource] = useState('demo'); // 'demo' | 'live'
 
             // Auth state
             const [user, setUser] = useState(null);
@@ -1493,17 +1494,23 @@
 
             // Hae Supabase-tapahtumat
             const refreshDbEvents = async () => {
-                if (!sb) { console.log('[Tapahtumii] Ei sb-yhteyttä'); return; }
+                if (!sb) { setIsLoading(false); return; }
                 try {
                     const today = new Date().toISOString().split('T')[0];
-                    console.log('[Tapahtumii] Haetaan DB-tapahtumat, today:', today);
+                    console.log('[Tapahtumii] Haetaan DB-tapahtumat...');
                     const { data, error } = await sb
                         .from('events')
                         .select('*')
+                        .gte('start_date', today)
                         .in('status', ['approved', 'auto_approved'])
                         .order('start_date', { ascending: true });
-                    console.log('[Tapahtumii] DB vastaus:', { data: data?.length, error: error?.message });
-                    if (error) return;
+                    
+                    if (error) { 
+                        console.warn('[Tapahtumii] DB virhe:', error.message);
+                        setIsLoading(false);
+                        return; 
+                    }
+                    
                     if (data && data.length > 0) {
                         const mapped = data.map(e => ({
                             id: 'db-' + e.id,
@@ -1517,16 +1524,29 @@
                             price: e.price || '',
                             ticketUrl: e.ticket_url,
                             eventUrl: e.event_url,
+                            imageUrl: e.image_url,
+                            source: e.source,
                         }));
-                        console.log('[Tapahtumii] Mapped DB events:', mapped);
-                        setEvents(prev => {
-                            const demoOnly = prev.filter(e => !String(e.id).startsWith('db-'));
-                            const result = [...demoOnly, ...mapped];
-                            console.log('[Tapahtumii] Events total:', result.length, '(demo:', demoOnly.length, 'db:', mapped.length, ')');
-                            return result;
-                        });
+                        
+                        // Jos yli 10 oikeaa tapahtumaa, korvaa demo kokonaan
+                        if (mapped.length >= 10) {
+                            console.log(`[Tapahtumii] ${mapped.length} live-tapahtumaa, demo korvattu`);
+                            setEvents(mapped);
+                            setDataSource('live');
+                        } else {
+                            // Vähän oikeaa dataa — yhdistä demon kanssa
+                            console.log(`[Tapahtumii] ${mapped.length} live + demo`);
+                            setEvents(prev => {
+                                const demoOnly = prev.filter(e => !String(e.id).startsWith('db-'));
+                                return [...mapped, ...demoOnly];
+                            });
+                        }
                     }
-                } catch(e) { console.error('[Tapahtumii] refreshDbEvents virhe:', e); }
+                    setIsLoading(false);
+                } catch(e) { 
+                    console.error('[Tapahtumii] DB haku:', e);
+                    setIsLoading(false);
+                }
             };
 
             useEffect(() => { refreshDbEvents(); }, []);
@@ -1680,7 +1700,7 @@
                                 <div style={{ fontSize: '0.55rem', opacity: 0.5, letterSpacing: '1px' }}>Haetaan tapahtumia...</div>
                             )}
                             <div style={{ fontSize: '0.5rem', opacity: 0.3 }}>
-                                {events.filter(e => String(e.id).startsWith('db-')).length} db / {events.length} yht / {selectedCity}
+                                {dataSource === 'live' ? '🟢' : '🟡'} {events.filter(e => String(e.id).startsWith('db-')).length} live / {events.length} yht
                             </div>
                         </div>
 
