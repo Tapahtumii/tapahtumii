@@ -1376,11 +1376,23 @@
             }, []);
 
             const loadProfile = async (userId) => {
+                // Yritä lukea profiili tietokannasta
                 try {
                     const { data, error } = await sb.from('user_profiles').select('*').eq('id', userId).single();
-                    if (error) { console.warn('[Tapahtumii] Profiili:', error.message); return; }
-                    if (data) setUserProfile(data);
-                } catch(e) { console.warn('[Tapahtumii] Profiili:', e); }
+                    if (!error && data) { setUserProfile(data); return; }
+                } catch(e) {}
+                // Fallback: lue rooli auth-metadatasta
+                try {
+                    const { data: { user } } = await sb.auth.getUser();
+                    if (user) {
+                        setUserProfile({
+                            id: user.id,
+                            email: user.email,
+                            display_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+                            role: user.user_metadata?.role || 'user',
+                        });
+                    }
+                } catch(e) {}
             };
 
             // Hae Supabase-tapahtumat taustalla (ei korvaa demoa jos virhe)
