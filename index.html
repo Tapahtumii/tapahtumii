@@ -1490,23 +1490,24 @@
 
             // Hae Supabase-tapahtumat
             const refreshDbEvents = async () => {
-                if (!sb) return;
+                if (!sb) { console.log('[Tapahtumii] Ei sb-yhteyttä'); return; }
                 try {
                     const today = new Date().toISOString().split('T')[0];
+                    console.log('[Tapahtumii] Haetaan DB-tapahtumat, today:', today);
                     const { data, error } = await sb
                         .from('events')
                         .select('*')
-                        .gte('start_date', today)
                         .in('status', ['approved', 'auto_approved'])
                         .order('start_date', { ascending: true });
+                    console.log('[Tapahtumii] DB vastaus:', { data: data?.length, error: error?.message });
                     if (error) return;
                     if (data && data.length > 0) {
                         const mapped = data.map(e => ({
                             id: 'db-' + e.id,
                             title: e.title,
                             city: e.city,
-                            category: e.category,
-                            subcategory: e.subcategory,
+                            category: e.category || 'Kulttuuri',
+                            subcategory: e.subcategory || '',
                             date: e.start_date,
                             time: e.start_time || '',
                             venue: e.venue || '',
@@ -1514,13 +1515,15 @@
                             ticketUrl: e.ticket_url,
                             eventUrl: e.event_url,
                         }));
-                        // Yhdistä: demo + db (ei duplikaatteja)
+                        console.log('[Tapahtumii] Mapped DB events:', mapped);
                         setEvents(prev => {
                             const demoOnly = prev.filter(e => !String(e.id).startsWith('db-'));
-                            return [...demoOnly, ...mapped];
+                            const result = [...demoOnly, ...mapped];
+                            console.log('[Tapahtumii] Events total:', result.length, '(demo:', demoOnly.length, 'db:', mapped.length, ')');
+                            return result;
                         });
                     }
-                } catch(e) {}
+                } catch(e) { console.error('[Tapahtumii] refreshDbEvents virhe:', e); }
             };
 
             useEffect(() => { refreshDbEvents(); }, []);
