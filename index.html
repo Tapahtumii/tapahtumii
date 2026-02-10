@@ -1275,16 +1275,22 @@
         };
 
         // ============================================================
-        // MODEROINTI-NÄKYMÄ (Admin)
+        // MODEROINTI-NÄKYMÄ (Admin) — muokkaus, hyväksyntä, hylkäys, poisto
         // ============================================================
-        const AdminPanel = ({ isOpen, onClose }) => {
+        const AdminPanel = ({ isOpen, onClose, onApproved }) => {
             const [pendingEvents, setPendingEvents] = useState([]);
+            const [allDbEvents, setAllDbEvents] = useState([]);
             const [loading, setLoading] = useState(true);
+            const [editingEvent, setEditingEvent] = useState(null);
+            const [tab, setTab] = useState('pending'); // 'pending' | 'all'
+
+            const inputStyle = { width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', color: '#fff', fontSize: '0.85rem', fontFamily: 'Outfit', marginBottom: '6px' };
 
             useEffect(() => {
                 if (!isOpen) return;
-                loadPending();
-            }, [isOpen]);
+                if (tab === 'pending') loadPending();
+                else loadAll();
+            }, [isOpen, tab]);
 
             const loadPending = async () => {
                 setLoading(true);
@@ -1293,39 +1299,126 @@
                 setLoading(false);
             };
 
+            const loadAll = async () => {
+                setLoading(true);
+                const { data } = await sb.from('events').select('*').order('start_date', { ascending: true }).limit(200);
+                setAllDbEvents(data || []);
+                setLoading(false);
+            };
+
             const handleModerate = async (id, newStatus) => {
                 await sb.from('events').update({ status: newStatus, approved_by: (await sb.auth.getUser()).data.user?.id }).eq('id', id);
                 loadPending();
+                if (newStatus === 'approved' && onApproved) onApproved();
+            };
+
+            const handleDelete = async (id) => {
+                if (!confirm('Poistetaanko tapahtuma pysyvästi?')) return;
+                await sb.from('events').delete().eq('id', id);
+                if (tab === 'pending') loadPending(); else loadAll();
+                if (onApproved) onApproved();
+            };
+
+            const handleSaveEdit = async () => {
+                if (!editingEvent) return;
+                const { id, ...fields } = editingEvent;
+                await sb.from('events').update({
+                    title: fields.title,
+                    description: fields.description,
+                    city: fields.city,
+                    venue: fields.venue,
+                    category: fields.category,
+                    subcategory: fields.subcategory,
+                    start_date: fields.start_date,
+                    start_time: fields.start_time,
+                    price: fields.price,
+                    ticket_url: fields.ticket_url,
+                    event_url: fields.event_url,
+                }).eq('id', id);
+                setEditingEvent(null);
+                if (tab === 'pending') loadPending(); else loadAll();
             };
 
             if (!isOpen) return null;
 
+            const eventsToShow = tab === 'pending' ? pendingEvents : allDbEvents;
+            const statusColors = { pending: '#f59e0b', approved: '#4ade80', auto_approved: '#38bdf8', rejected: '#f87171' };
+
             return (
                 <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
                     onClick={onClose}>
-                    <div className="scrollbar-hide" style={{ background: '#1a1a2e', borderRadius: '20px', padding: '24px', maxWidth: '500px', width: '100%', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '85vh', overflowY: 'auto' }}
+                    <div className="scrollbar-hide" style={{ background: '#1a1a2e', borderRadius: '20px', padding: '24px', maxWidth: '550px', width: '100%', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '85vh', overflowY: 'auto' }}
                         onClick={e => e.stopPropagation()}>
-                        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '16px' }}>Moderointijono ({pendingEvents.length})</h2>
 
-                        {loading ? <div style={{ opacity: 0.5 }}>Ladataan...</div> : pendingEvents.length === 0 ? (
-                            <div style={{ opacity: 0.5, textAlign: 'center', padding: '20px' }}>Ei odottavia tapahtumia ✓</div>
-                        ) : pendingEvents.map(ev => (
-                            <div key={ev.id} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '14px', marginBottom: '10px' }}>
-                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>{ev.title}</div>
-                                <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '8px' }}>
-                                    {ev.city} · {ev.category} · {ev.start_date} {ev.start_time} · {ev.venue || '—'}
+                        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '12px' }}>Moderointi</h2>
+
+                        {/* Välilehdet */}
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                            <button onClick={() => setTab('pending')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontFamily: 'Outfit', fontSize: '0.8rem', background: tab === 'pending' ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.06)', color: tab === 'pending' ? '#fbbf24' : '#999' }}>
+                                Odottavat ({pendingEvents.length})
+                            </button>
+                            <button onClick={() => setTab('all')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontFamily: 'Outfit', fontSize: '0.8rem', background: tab === 'all' ? 'rgba(56,189,248,0.3)' : 'rgba(255,255,255,0.06)', color: tab === 'all' ? '#38bdf8' : '#999' }}>
+                                Kaikki tapahtumat
+                            </button>
+                        </div>
+
+                        {/* Muokkausnäkymä */}
+                        {editingEvent ? (
+                            <div>
+                                <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '10px' }}>Muokkaa tapahtumaa</h3>
+                                <input value={editingEvent.title} onChange={e => setEditingEvent({...editingEvent, title: e.target.value})} placeholder="Nimi" style={inputStyle} />
+                                <textarea value={editingEvent.description || ''} onChange={e => setEditingEvent({...editingEvent, description: e.target.value})} placeholder="Kuvaus" rows={2} style={{...inputStyle, resize: 'vertical'}} />
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <select value={editingEvent.city} onChange={e => setEditingEvent({...editingEvent, city: e.target.value})} style={{...inputStyle, flex: 1}}>
+                                        {['Helsinki','Tampere','Turku','Oulu'].map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                    <input value={editingEvent.venue || ''} onChange={e => setEditingEvent({...editingEvent, venue: e.target.value})} placeholder="Paikka" style={{...inputStyle, flex: 1}} />
                                 </div>
-                                {ev.description && <div style={{ fontSize: '0.75rem', opacity: 0.5, marginBottom: '8px' }}>{ev.description.substring(0, 100)}</div>}
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button onClick={() => handleModerate(ev.id, 'approved')} style={{ flex: 1, padding: '8px', background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', color: '#4ade80', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'Outfit' }}>
-                                        ✓ Hyväksy
-                                    </button>
-                                    <button onClick={() => handleModerate(ev.id, 'rejected')} style={{ flex: 1, padding: '8px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', color: '#f87171', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'Outfit' }}>
-                                        ✗ Hylkää
-                                    </button>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <select value={editingEvent.category} onChange={e => setEditingEvent({...editingEvent, category: e.target.value})} style={{...inputStyle, flex: 1}}>
+                                        {['Musiikki','Urheilu','Kulttuuri','Lapset'].map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                    <input value={editingEvent.subcategory || ''} onChange={e => setEditingEvent({...editingEvent, subcategory: e.target.value})} placeholder="Alakategoria" style={{...inputStyle, flex: 1}} />
+                                </div>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <input type="date" value={editingEvent.start_date || ''} onChange={e => setEditingEvent({...editingEvent, start_date: e.target.value})} style={{...inputStyle, flex: 1}} />
+                                    <input type="time" value={editingEvent.start_time || ''} onChange={e => setEditingEvent({...editingEvent, start_time: e.target.value})} style={{...inputStyle, flex: 1}} />
+                                </div>
+                                <input value={editingEvent.price || ''} onChange={e => setEditingEvent({...editingEvent, price: e.target.value})} placeholder="Hinta" style={inputStyle} />
+                                <input value={editingEvent.ticket_url || ''} onChange={e => setEditingEvent({...editingEvent, ticket_url: e.target.value})} placeholder="Lipunmyynti URL" style={inputStyle} />
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                    <button onClick={handleSaveEdit} style={{ flex: 1, padding: '10px', background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', color: '#4ade80', fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'Outfit', fontWeight: 600 }}>💾 Tallenna</button>
+                                    <button onClick={() => setEditingEvent(null)} style={{ flex: 1, padding: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#999', fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'Outfit' }}>Peruuta</button>
                                 </div>
                             </div>
-                        ))}
+                        ) : (
+                            /* Tapahtumalista */
+                            loading ? <div style={{ opacity: 0.5 }}>Ladataan...</div> : eventsToShow.length === 0 ? (
+                                <div style={{ opacity: 0.5, textAlign: 'center', padding: '20px' }}>{tab === 'pending' ? 'Ei odottavia tapahtumia ✓' : 'Ei tapahtumia'}</div>
+                            ) : eventsToShow.map(ev => (
+                                <div key={ev.id} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '14px', marginBottom: '10px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                        <div style={{ fontWeight: 600, flex: 1 }}>{ev.title}</div>
+                                        {tab === 'all' && <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '6px', background: `${statusColors[ev.status] || '#666'}22`, color: statusColors[ev.status] || '#666' }}>{ev.status}</span>}
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '4px' }}>
+                                        {ev.city} · {ev.category}{ev.subcategory ? '/' + ev.subcategory : ''} · {ev.start_date} {ev.start_time || ''} · {ev.venue || '—'}
+                                    </div>
+                                    {ev.source && <div style={{ fontSize: '0.65rem', opacity: 0.3, marginBottom: '6px' }}>Lähde: {ev.source}</div>}
+                                    {ev.description && <div style={{ fontSize: '0.75rem', opacity: 0.5, marginBottom: '8px' }}>{ev.description.substring(0, 120)}</div>}
+                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                        <button onClick={() => setEditingEvent({...ev})} style={{ padding: '6px 12px', background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', color: '#38bdf8', fontSize: '0.75rem', cursor: 'pointer', fontFamily: 'Outfit' }}>✏️ Muokkaa</button>
+                                        {tab === 'pending' && (
+                                            <button onClick={() => handleModerate(ev.id, 'approved')} style={{ padding: '6px 12px', background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', color: '#4ade80', fontSize: '0.75rem', cursor: 'pointer', fontFamily: 'Outfit' }}>✓ Hyväksy</button>
+                                        )}
+                                        {tab === 'pending' && (
+                                            <button onClick={() => handleModerate(ev.id, 'rejected')} style={{ padding: '6px 12px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', color: '#f87171', fontSize: '0.75rem', cursor: 'pointer', fontFamily: 'Outfit' }}>✗ Hylkää</button>
+                                        )}
+                                        <button onClick={() => handleDelete(ev.id)} style={{ padding: '6px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: '8px', color: '#f87171', fontSize: '0.75rem', cursor: 'pointer', fontFamily: 'Outfit' }}>🗑 Poista</button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             );
@@ -1395,45 +1488,42 @@
                 } catch(e) {}
             };
 
-            // Hae Supabase-tapahtumat taustalla (ei korvaa demoa jos virhe)
-            useEffect(() => {
+            // Hae Supabase-tapahtumat
+            const refreshDbEvents = async () => {
                 if (!sb) return;
-                const fetchDbEvents = async () => {
-                    try {
-                        const today = new Date().toISOString().split('T')[0];
-                        const { data, error } = await sb
-                            .from('events')
-                            .select('*')
-                            .gte('start_date', today)
-                            .in('status', ['approved', 'auto_approved'])
-                            .order('start_date', { ascending: true });
-                        if (error) {
-                            console.warn('[Tapahtumii] Supabase virhe:', error.message);
-                            return; // Älä koske demoon
-                        }
-                        if (data && data.length > 0) {
-                            const mapped = data.map(e => ({
-                                id: 'db-' + e.id,
-                                title: e.title,
-                                city: e.city,
-                                category: e.category,
-                                subcategory: e.subcategory,
-                                date: e.start_date,
-                                time: e.start_time || '',
-                                venue: e.venue || '',
-                                price: e.price || '',
-                                ticketUrl: e.ticket_url,
-                                eventUrl: e.event_url,
-                            }));
-                            setEvents(prev => [...prev, ...mapped]);
-                        }
-                    } catch(e) {
-                        console.warn('[Tapahtumii] Supabase-haku:', e);
-                        // Virhe → pidetään demo-data
+                try {
+                    const today = new Date().toISOString().split('T')[0];
+                    const { data, error } = await sb
+                        .from('events')
+                        .select('*')
+                        .gte('start_date', today)
+                        .in('status', ['approved', 'auto_approved'])
+                        .order('start_date', { ascending: true });
+                    if (error) return;
+                    if (data && data.length > 0) {
+                        const mapped = data.map(e => ({
+                            id: 'db-' + e.id,
+                            title: e.title,
+                            city: e.city,
+                            category: e.category,
+                            subcategory: e.subcategory,
+                            date: e.start_date,
+                            time: e.start_time || '',
+                            venue: e.venue || '',
+                            price: e.price || '',
+                            ticketUrl: e.ticket_url,
+                            eventUrl: e.event_url,
+                        }));
+                        // Yhdistä: demo + db (ei duplikaatteja)
+                        setEvents(prev => {
+                            const demoOnly = prev.filter(e => !String(e.id).startsWith('db-'));
+                            return [...demoOnly, ...mapped];
+                        });
                     }
-                };
-                fetchDbEvents();
-            }, []);
+                } catch(e) {}
+            };
+
+            useEffect(() => { refreshDbEvents(); }, []);
 
             const allEvents = events;
 
@@ -1772,7 +1862,7 @@
                     {/* Modaalit */}
                     <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} onAuth={setUser} />
                     <AddEventModal isOpen={showAddEvent} onClose={() => setShowAddEvent(false)} user={user} onEventAdded={(ev) => { setEvents(prev => [...prev, { id: 'db-' + ev.id, title: ev.title, city: ev.city, category: ev.category, subcategory: ev.subcategory, date: ev.start_date, time: ev.start_time || '', venue: ev.venue || '', price: ev.price || '' }]); }} />
-                    <AdminPanel isOpen={showAdmin} onClose={() => setShowAdmin(false)} />
+                    <AdminPanel isOpen={showAdmin} onClose={() => setShowAdmin(false)} onApproved={refreshDbEvents} />
                 </div>
             );
         };
