@@ -1751,11 +1751,15 @@
                                     return hashStr(a.id) - hashStr(b.id);
                                 });
 
+                                const maxBubbles = 15;
+                                const showMore = shuffled.length > maxBubbles;
+                                const visibleBubbles = shuffled.slice(0, maxBubbles);
+
                                 return (
                                     <div key={date} data-date={date} style={{ display: 'flex', alignItems: 'stretch' }}>
                                         {/* Kupla-sarake — kasvaa sisällön mukaan */}
                                         <div style={{ flex: 1, paddingLeft: '12px', paddingRight: '8px', paddingTop: '8px', paddingBottom: '8px', minHeight: dayEvents.length === 0 ? '100px' : '120px' }}>
-                                            {shuffled.map((event) => {
+                                            {visibleBubbles.map((event) => {
                                                 const idx = bubbleIndex++;
                                                 return (
                                                     <Bubble
@@ -1767,6 +1771,11 @@
                                                     />
                                                 );
                                             })}
+                                            {showMore && (
+                                                <div style={{ padding: '8px 16px', textAlign: 'center', opacity: 0.4, fontSize: '0.7rem' }}>
+                                                    +{shuffled.length - maxBubbles} muuta tapahtumaa
+                                                </div>
+                                            )}
                                             {dayEvents.length === 0 && (
                                                 <div style={{ padding: '30px 20px', textAlign: 'center', opacity: 0.15, fontSize: '0.75rem' }}>
                                                     ei tapahtumia
