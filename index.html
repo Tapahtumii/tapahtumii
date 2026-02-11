@@ -861,39 +861,46 @@
                 }
             }, [onToggle, eventId]);
 
-            // Ei tarvita scrollia — fixed position hoitaa näkyvyyden
+            // Scroll kupla keskelle kun se laajenee
+            useEffect(() => {
+                if (isExpanded && bubbleRef.current) {
+                    setTimeout(() => {
+                        if (!bubbleRef.current) return;
+                        const rect = bubbleRef.current.getBoundingClientRect();
+                        const viewportHeight = window.innerHeight;
+                        const isMob = window.innerWidth < 768;
+                        const bubbleH = isMob ? Math.min(300, window.innerWidth - 60) : 340;
+                        const container = bubbleRef.current.closest('.scrollbar-hide');
+                        if (container) {
+                            const containerRect = container.getBoundingClientRect();
+                            const bubbleTopInContainer = rect.top - containerRect.top + container.scrollTop;
+                            const targetScroll = bubbleTopInContainer - (viewportHeight / 2) + (bubbleH / 2);
+                            container.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+                        }
+                    }, 50);
+                }
+            }, [isExpanded]);
 
             const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
             const expandedSize = isMobile ? Math.min(300, window.innerWidth - 60) : 340;
 
             return (
-                <>
-                {/* Placeholder to keep layout space when bubble is fixed-positioned */}
-                {isExpanded && (
-                    <div style={{ height: `${baseSize + 12}px`, marginLeft: `${randomLeft}%` }} className="mb-3" />
-                )}
                 <div
                     ref={bubbleRef}
-                    className={`${!isExpanded ? 'mb-3' : ''} ${(!isExpanded && !hasAppeared.current) ? 'bubble-appear' : ''}`}
+                    className={`mb-3 ${(!isExpanded && !hasAppeared.current) ? 'bubble-appear' : ''}`}
                     style={{
-                        ...(isExpanded ? {
-                            position: 'fixed',
-                            left: '50%',
-                            top: '50%',
-                            transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px)`,
-                            zIndex: 1000,
-                            maxWidth: `${expandedSize}px`,
-                            width: `${expandedSize}px`,
-                        } : {
-                            marginLeft: `${randomLeft}%`,
-                            transform: `translate(${offset.x}px, ${offset.y}px)`,
-                            maxWidth: `${baseSize}px`,
-                            width: 'auto',
-                            position: 'relative',
-                            zIndex: isDragging ? 999 : 10,
-                        }),
+                        marginLeft: isExpanded ? '50%' : `${randomLeft}%`,
                         animationDelay: !isExpanded ? `${cappedDelay * 0.04}s` : undefined,
-                        transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                        transform: isExpanded 
+                            ? `translateX(-50%) translate(${offset.x}px, ${offset.y}px)` 
+                            : `translate(${offset.x}px, ${offset.y}px)`,
+                        maxWidth: isExpanded ? `${expandedSize}px` : `${baseSize}px`,
+                        width: isExpanded ? `${expandedSize}px` : 'auto',
+                        position: 'relative',
+                        zIndex: isExpanded ? 1000 : (isDragging ? 999 : 10),
+                        transition: isDragging
+                            ? 'none' 
+                            : 'margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), max-width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                     }}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
@@ -1074,7 +1081,6 @@
                         )}
                     </div>
                 </div>
-                </>
             );
         });
 
