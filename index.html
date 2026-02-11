@@ -861,7 +861,7 @@
                 }
             }, [onToggle, eventId]);
 
-            // Scroll kupla keskelle kun se laajenee
+            // Scroll vain sen verran että kupla näkyy kokonaan
             useEffect(() => {
                 if (isExpanded && bubbleRef.current) {
                     setTimeout(() => {
@@ -872,10 +872,18 @@
                         const bubbleH = isMob ? Math.min(300, window.innerWidth - 60) : 340;
                         const container = bubbleRef.current.closest('.scrollbar-hide');
                         if (container) {
-                            const containerRect = container.getBoundingClientRect();
-                            const bubbleTopInContainer = rect.top - containerRect.top + container.scrollTop;
-                            const targetScroll = bubbleTopInContainer - (viewportHeight / 2) + (bubbleH / 2);
-                            container.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+                            const topMargin = 70; // header height
+                            const bottomMargin = 150; // bottom nav
+                            const bubbleTop = rect.top;
+                            const bubbleBottom = rect.top + bubbleH;
+                            
+                            if (bubbleTop < topMargin) {
+                                // Kupla on liian ylhäällä — scrollaa ylöspäin
+                                container.scrollBy({ top: bubbleTop - topMargin - 20, behavior: 'smooth' });
+                            } else if (bubbleBottom > viewportHeight - bottomMargin) {
+                                // Kupla on liian alhaalla — scrollaa alaspäin
+                                container.scrollBy({ top: bubbleBottom - (viewportHeight - bottomMargin) + 20, behavior: 'smooth' });
+                            }
                         }
                     }, 50);
                 }
