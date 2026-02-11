@@ -861,46 +861,53 @@
                 }
             }, [onToggle, eventId]);
 
-            // Scroll kupla keskelle kun se laajenee
+            // Ei tarvita scrollia — kupla avautuu paikoilleen
+            // Mutta varmistetaan että se näkyy kokonaan
             useEffect(() => {
                 if (isExpanded && bubbleRef.current) {
                     setTimeout(() => {
-                        if (!bubbleRef.current) return;
-                        const rect = bubbleRef.current.getBoundingClientRect();
-                        const viewportHeight = window.innerHeight;
-                        const isMob = window.innerWidth < 768;
-                        const bubbleH = isMob ? Math.min(300, window.innerWidth - 60) : 340;
-                        const container = bubbleRef.current.closest('.scrollbar-hide');
-                        if (container) {
-                            const containerRect = container.getBoundingClientRect();
-                            const bubbleTopInContainer = rect.top - containerRect.top + container.scrollTop;
-                            const targetScroll = bubbleTopInContainer - (viewportHeight / 2) + (bubbleH / 2);
-                            container.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
-                        }
-                    }, 50);
+                        bubbleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 100);
                 }
             }, [isExpanded]);
 
             const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
             const expandedSize = isMobile ? Math.min(300, window.innerWidth - 60) : 340;
 
+            // Laske expanded marginLeft niin että kupla pysyy näkyvissä
+            const expandedMargin = useMemo(() => {
+                if (typeof window === 'undefined') return '20%';
+                const timelineW = 56;
+                const padL = 12;
+                const availW = window.innerWidth - timelineW - padL;
+                // Kuplan alkuperäinen keskipiste pikseleinä
+                const origCenterPx = (randomLeft / 100) * availW + baseSize / 2;
+                // Clamp niin että expanded kupla mahtuu
+                const half = expandedSize / 2;
+                const minCenter = half + 4;
+                const maxCenter = availW - half - 4;
+                const clampedCenter = Math.max(minCenter, Math.min(maxCenter, origCenterPx));
+                // Muunna takaisin marginLeft (px, ei %)
+                const ml = clampedCenter - half;
+                return `${ml}px`;
+            }, [randomLeft, baseSize, expandedSize]);
+
             return (
+                <>
                 <div
                     ref={bubbleRef}
                     className={`mb-3 ${(!isExpanded && !hasAppeared.current) ? 'bubble-appear' : ''}`}
                     style={{
-                        marginLeft: isExpanded ? '50%' : `${randomLeft}%`,
+                        marginLeft: isExpanded ? expandedMargin : `${randomLeft}%`,
                         animationDelay: !isExpanded ? `${cappedDelay * 0.04}s` : undefined,
-                        transform: isExpanded 
-                            ? `translateX(-50%) translate(${offset.x}px, ${offset.y}px)` 
-                            : `translate(${offset.x}px, ${offset.y}px)`,
+                        transform: `translate(${offset.x}px, ${offset.y}px)`,
                         maxWidth: isExpanded ? `${expandedSize}px` : `${baseSize}px`,
                         width: isExpanded ? `${expandedSize}px` : 'auto',
                         position: 'relative',
                         zIndex: isExpanded ? 1000 : (isDragging ? 999 : 10),
                         transition: isDragging
                             ? 'none' 
-                            : 'margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), max-width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                            : 'margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), max-width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                     }}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
@@ -1081,6 +1088,7 @@
                         )}
                     </div>
                 </div>
+                </>
             );
         });
 
