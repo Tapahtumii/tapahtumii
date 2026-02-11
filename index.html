@@ -861,13 +861,28 @@
                 }
             }, [onToggle, eventId]);
 
-            // Ei tarvita scrollia — kupla avautuu paikoilleen
-            // Mutta varmistetaan että se näkyy kokonaan
+            // Varmistetaan että laajennettu kupla näkyy kokonaan
             useEffect(() => {
                 if (isExpanded && bubbleRef.current) {
+                    // Odotetaan transition loppuun (400ms) + pieni margni
                     setTimeout(() => {
-                        bubbleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }, 100);
+                        if (!bubbleRef.current) return;
+                        const rect = bubbleRef.current.getBoundingClientRect();
+                        const container = bubbleRef.current.closest('.scrollbar-hide');
+                        if (!container) return;
+                        const bottomNav = 140; // alapalkin korkeus (kategoria + kaupunki)
+                        const topBar = 60;
+                        const isMob = window.innerWidth < 768;
+                        const bubbleH = isMob ? Math.min(300, window.innerWidth - 60) : 340;
+                        const bubbleBottom = rect.top + bubbleH;
+                        const visibleBottom = window.innerHeight - bottomNav;
+                        
+                        if (bubbleBottom > visibleBottom) {
+                            container.scrollBy({ top: bubbleBottom - visibleBottom + 24, behavior: 'smooth' });
+                        } else if (rect.top < topBar) {
+                            container.scrollBy({ top: rect.top - topBar - 24, behavior: 'smooth' });
+                        }
+                    }, 450);
                 }
             }, [isExpanded]);
 
