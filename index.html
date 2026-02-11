@@ -50,8 +50,10 @@
 
         /* Kupla-animaatiot */
         @keyframes bubbleFloat {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-3px); }
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            25% { transform: translateY(-6px) rotate(0.5deg); }
+            50% { transform: translateY(-3px) rotate(-0.3deg); }
+            75% { transform: translateY(-8px) rotate(0.2deg); }
         }
 
         @keyframes bubblePop {
@@ -61,7 +63,8 @@
         }
 
         @keyframes bubbleAppear {
-            0% { transform: scale(0.8); opacity: 0; }
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.1); opacity: 0.8; }
             100% { transform: scale(1); opacity: 1; }
         }
 
@@ -132,7 +135,7 @@
         }
 
         .bubble-float {
-            animation: bubbleFloat 7s ease-in-out infinite;
+            animation: bubbleFloat 5s ease-in-out infinite;
             will-change: transform;
         }
 
@@ -141,7 +144,7 @@
         }
 
         .bubble-appear {
-            animation: bubbleAppear 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+            animation: bubbleAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 
         .bubble {
@@ -767,6 +770,13 @@
             const [offset, setOffset] = useState({ x: 0, y: 0 });
             const [isDragging, setIsDragging] = useState(false);
             const [contentVisible, setContentVisible] = useState(false);
+            const hasAppeared = useRef(false);
+
+            // Mark as appeared after first animation
+            useEffect(() => {
+                const timer = setTimeout(() => { hasAppeared.current = true; }, 700);
+                return () => clearTimeout(timer);
+            }, []);
 
             const color = getColor(event.category, event.subcategory);
             
@@ -877,7 +887,7 @@
             return (
                 <div
                     ref={bubbleRef}
-                    className={`mb-3 ${!isExpanded ? 'bubble-appear' : ''}`}
+                    className={`mb-3 ${(!isExpanded && !hasAppeared.current) ? 'bubble-appear' : ''}`}
                     style={{
                         marginLeft: isExpanded ? '50%' : `${randomLeft}%`,
                         animationDelay: !isExpanded ? `${cappedDelay * 0.04}s` : undefined,
@@ -891,8 +901,8 @@
                         transition: isDragging
                             ? 'none' 
                             : isExpanded
-                                ? 'margin-left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), max-width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.3s ease-out'
-                                : 'margin-left 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), max-width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.25s ease-out',
+                                ? 'margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), max-width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                                : 'margin-left 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), max-width 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                     }}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
@@ -937,7 +947,7 @@
                                 ? `0 25px 80px ${color.glow}, 0 0 60px ${color.glow.replace('0.5', '0.3')}, inset 0 0 0 1.5px rgba(255,255,255,0.15)`
                                 : `0 8px 30px ${color.glow}, inset 0 0 0 1px rgba(255,255,255,0.2)`,
                             animationDelay: `${animDelay * 0.3}s`,
-                            animationDuration: `${6 + (numId % 4)}s`,
+                            animationDuration: `${4 + (numId % 3)}s`,
                             overflow: 'hidden',
                             position: 'relative',
                         }}
