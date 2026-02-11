@@ -884,12 +884,30 @@
             const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
             const expandedSize = isMobile ? Math.min(300, window.innerWidth - 60) : 340;
 
+            // Calculate expanded position - stay near original spot but ensure fully visible
+            const expandedLeft = useMemo(() => {
+                if (!isMobile) return '50%'; // desktop: center is fine
+                // On mobile: clamp so bubble stays visible
+                // randomLeft is 0-65%, we need to ensure the expanded bubble fits
+                const viewW = typeof window !== 'undefined' ? window.innerWidth : 375;
+                const timelineW = 56; // right sidebar width
+                const availableW = viewW - timelineW - 16; // minus padding
+                const halfBubble = expandedSize / 2;
+                // Original position as pixels from left edge of content area
+                const origPx = (randomLeft / 100) * (availableW - baseSize) + baseSize / 2;
+                // Clamp so full bubble is visible
+                const minLeft = halfBubble + 8;
+                const maxLeft = availableW - halfBubble - 8;
+                const clampedPx = Math.max(minLeft, Math.min(maxLeft, origPx));
+                return `${clampedPx}px`;
+            }, [randomLeft, expandedSize, baseSize, isMobile]);
+
             return (
                 <div
                     ref={bubbleRef}
                     className={`mb-3 ${(!isExpanded && !hasAppeared.current) ? 'bubble-appear' : ''}`}
                     style={{
-                        marginLeft: isExpanded ? '50%' : `${randomLeft}%`,
+                        marginLeft: isExpanded ? expandedLeft : `${randomLeft}%`,
                         animationDelay: !isExpanded ? `${cappedDelay * 0.04}s` : undefined,
                         transform: isExpanded 
                             ? `translateX(-50%) translate(${offset.x}px, ${offset.y}px)` 
