@@ -151,9 +151,9 @@
             cursor: pointer;
             touch-action: none;
             user-select: none;
-            transition: border-radius 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
-                        width 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
-                        height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+            transition: border-radius 0.35s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        height 0.35s cubic-bezier(0.25, 0.1, 0.25, 1),
                         box-shadow 0.3s ease,
                         background 0.3s ease;
             transform: translateZ(0);
@@ -842,12 +842,15 @@
                     setOffset({ x: 0, y: 0 });
                     setTimeout(() => { dragState.current.isDragging = false; }, 100);
                 } else {
+                    try { navigator?.vibrate?.(8); } catch {}
                     onToggle(prev => prev === eventId ? null : eventId);
                 }
             }, [onToggle, eventId]);
 
             const handleClick = useCallback((e) => {
-                if (!('ontouchstart' in window)) onToggle(prev => prev === eventId ? null : eventId);
+                if (!('ontouchstart' in window)) {
+                    onToggle(prev => prev === eventId ? null : eventId);
+                }
             }, [onToggle, eventId]);
 
             // Scroll kupla keskelle kun se laajenee
@@ -891,7 +894,7 @@
                             ? 'none' 
                             : isExpanded
                                 ? 'margin-left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), max-width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.3s ease-out'
-                                : 'margin-left 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.3s ease-out',
+                                : 'margin-left 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), max-width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.25s ease-out',
                     }}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
@@ -1498,6 +1501,40 @@
             const [events, setEvents] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [dataSource, setDataSource] = useState('demo'); // 'demo' | 'live'
+
+            // Haptic feedback helper
+            const haptic = useCallback((ms = 10) => {
+                try { navigator?.vibrate?.(ms); } catch {}
+            }, []);
+
+            // Swipe detection for category change
+            const swipeRef = useRef({ startX: 0, startY: 0, time: 0 });
+            const handleSwipeStart = useCallback((e) => {
+                const t = e.touches?.[0];
+                if (t) swipeRef.current = { startX: t.clientX, startY: t.clientY, time: Date.now() };
+            }, []);
+            const handleSwipeEnd = useCallback((e) => {
+                const t = e.changedTouches?.[0];
+                if (!t) return;
+                const dx = t.clientX - swipeRef.current.startX;
+                const dy = t.clientY - swipeRef.current.startY;
+                const dt = Date.now() - swipeRef.current.time;
+                // Must be horizontal, fast, and not too vertical
+                if (Math.abs(dx) > 60 && Math.abs(dy) < Math.abs(dx) * 0.7 && dt < 400) {
+                    const cats = ['Kaikki', 'Musiikki', 'Urheilu', 'Lapset'];
+                    const curIdx = cats.indexOf(selectedCategory);
+                    if (dx < 0 && curIdx < cats.length - 1) {
+                        setSelectedCategory(cats[curIdx + 1]);
+                        scrollToCenter(categoryScrollRef, curIdx + 1);
+                        haptic(8);
+                    } else if (dx > 0 && curIdx > 0) {
+                        setSelectedCategory(cats[curIdx - 1]);
+                        scrollToCenter(categoryScrollRef, curIdx - 1);
+                        haptic(8);
+                    }
+                    setExpandedEvent(null);
+                }
+            }, [selectedCategory, haptic]);
             const [loadingDone, setLoadingDone] = useState(false);
 
             // Auth state
@@ -1787,7 +1824,7 @@
                                 ))}
                             </div>
                             <div style={{ textAlign: 'center' }}>
-                                <div style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 50%, #F59E0B 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '12px' }}>
+                                <div style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 50%, #10B981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '12px' }}>
                                     tapahtumii.com
                                 </div>
                                 <div style={{ opacity: 0.4, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Haetaan tapahtumia...</div>
@@ -1808,7 +1845,7 @@
                         <div onClick={scrollToToday} style={{ cursor: 'pointer', textAlign: 'center', position: 'relative' }}>
                             <div style={{ 
                                 fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.5px', 
-                                background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 25%, #F59E0B 50%, #EC4899 75%, #A78BFA 100%)',
+                                background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 25%, #A78BFA 45%, #34D399 65%, #EC4899 80%, #A78BFA 100%)',
                                 backgroundSize: '200% 100%',
                                 animation: 'logoShine 6s ease-in-out infinite',
                                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', 
@@ -1833,6 +1870,8 @@
                     <div 
                         ref={mainScrollRef}
                         onScroll={handleScroll}
+                        onTouchStart={handleSwipeStart}
+                        onTouchEnd={handleSwipeEnd}
                         className="scrollbar-hide"
                         style={{ flex: 1, overflowY: 'auto', paddingBottom: '140px', position: 'relative' }}
                     >
@@ -1952,7 +1991,7 @@
                                 {categories.map((cat, idx) => (
                                     <button
                                         key={cat}
-                                        onClick={() => { setSelectedCategory(cat); scrollToCenter(categoryScrollRef, idx); setExpandedEvent(null); }}
+                                        onClick={() => { setSelectedCategory(cat); scrollToCenter(categoryScrollRef, idx); setExpandedEvent(null); try { navigator?.vibrate?.(6); } catch {} }}
                                         style={{
                                             flexShrink: 0, padding: '6px 16px',
                                             borderRadius: '20px', border: 'none',
@@ -1982,7 +2021,7 @@
                                 {cities.map((city, idx) => (
                                     <button
                                         key={city}
-                                        onClick={() => { setSelectedCity(city); scrollToCenter(cityScrollRef, idx); setExpandedEvent(null); }}
+                                        onClick={() => { setSelectedCity(city); scrollToCenter(cityScrollRef, idx); setExpandedEvent(null); try { navigator?.vibrate?.(6); } catch {} }}
                                         style={{
                                             flexShrink: 0, padding: '6px 16px',
                                             borderRadius: '20px', border: 'none',
