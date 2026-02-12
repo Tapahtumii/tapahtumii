@@ -940,6 +940,10 @@
                                 if (confirm('Poistetaanko tapahtuma?')) {
                                     const dbId = String(event.id).replace('db-', '');
                                     sb?.from('events').delete().eq('id', dbId).then(() => {});
+                                    // Tallenna poistettujen listaan ettei tule takaisin
+                                    if (event.source_id) {
+                                        sb?.from('deleted_events').upsert({ source_id: event.source_id }, { onConflict: 'source_id' }).then(() => {});
+                                    }
                                     onDelete?.(event.id);
                                 }
                             }}
@@ -1670,6 +1674,7 @@
                             eventUrl: e.event_url,
                             imageUrl: e.image_url,
                             source: e.source,
+                            source_id: e.source_id,
                         }));
                         console.log(`[Tapahtumii] ${mapped.length} live-tapahtumaa`);
                         finishLoading(mapped, 'live');
