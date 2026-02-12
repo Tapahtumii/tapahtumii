@@ -852,7 +852,7 @@
                     setOffset({ x: 0, y: 0 });
                     setTimeout(() => { dragState.current.isDragging = false; }, 100);
                 } else {
-                    try { navigator?.vibrate?.(8); } catch {}
+                    
                     onToggle(prev => prev === eventId ? null : eventId);
                 }
             }, [onToggle, eventId]);
@@ -1542,10 +1542,6 @@
             const [dataSource, setDataSource] = useState('demo'); // 'demo' | 'live'
 
             // Haptic feedback helper
-            const haptic = useCallback((ms = 10) => {
-                try { navigator?.vibrate?.(ms); } catch {}
-            }, []);
-
             // Swipe detection for category change
             const swipeRef = useRef({ startX: 0, startY: 0, time: 0 });
             const handleSwipeStart = useCallback((e) => {
@@ -1565,15 +1561,15 @@
                     if (dx < 0 && curIdx < cats.length - 1) {
                         setSelectedCategory(cats[curIdx + 1]);
                         scrollToCenter(categoryScrollRef, curIdx + 1);
-                        haptic(8);
+                        
                     } else if (dx > 0 && curIdx > 0) {
                         setSelectedCategory(cats[curIdx - 1]);
                         scrollToCenter(categoryScrollRef, curIdx - 1);
-                        haptic(8);
+                        
                     }
                     setExpandedEvent(null);
                 }
-            }, [selectedCategory, haptic]);
+            }, [selectedCategory]);
             const [loadingDone, setLoadingDone] = useState(false);
 
             // Auth state
@@ -2029,7 +2025,7 @@
                                 {categories.map((cat, idx) => (
                                     <button
                                         key={cat}
-                                        onClick={() => { setSelectedCategory(cat); scrollToCenter(categoryScrollRef, idx); setExpandedEvent(null); try { navigator?.vibrate?.(6); } catch {} }}
+                                        onClick={() => { setSelectedCategory(cat); scrollToCenter(categoryScrollRef, idx); setExpandedEvent(null);  }}
                                         style={{
                                             flexShrink: 0, padding: '6px 16px',
                                             borderRadius: '20px', border: 'none',
@@ -2059,7 +2055,7 @@
                                 {cities.map((city, idx) => (
                                     <button
                                         key={city}
-                                        onClick={() => { setSelectedCity(city); scrollToCenter(cityScrollRef, idx); setExpandedEvent(null); try { navigator?.vibrate?.(6); } catch {} }}
+                                        onClick={() => { setSelectedCity(city); scrollToCenter(cityScrollRef, idx); setExpandedEvent(null);  }}
                                         style={{
                                             flexShrink: 0, padding: '6px 16px',
                                             borderRadius: '20px', border: 'none',
