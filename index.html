@@ -1041,8 +1041,9 @@
 
                                 {/* Toimintopainikkeet */}
                                 <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                    {(event.ticketUrl || event.eventUrl) && (
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); }}
+                                        onClick={(e) => { e.stopPropagation(); window.open(event.ticketUrl || event.eventUrl, '_blank'); }}
                                         style={{
                                             padding: '7px 16px',
                                             background: 'rgba(255,255,255,0.2)',
@@ -1059,8 +1060,10 @@
                                     >
                                         <TicketIcon className="w-3 h-3" /> Liput
                                     </button>
+                                    )}
+                                    {event.eventUrl && (
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); }}
+                                        onClick={(e) => { e.stopPropagation(); window.open(event.eventUrl, '_blank'); }}
                                         style={{
                                             padding: '7px 16px',
                                             background: 'rgba(255,255,255,0.1)',
@@ -1077,6 +1080,7 @@
                                     >
                                         <ExternalLinkIcon className="w-3 h-3" /> Info
                                     </button>
+                                    )}
                                 </div>
                             </div>
                         ) : (
