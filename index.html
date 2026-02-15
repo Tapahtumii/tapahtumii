@@ -1731,7 +1731,11 @@
                     : new Date(today);
                 const endDate = new Date(lastEventDate);
                 endDate.setDate(endDate.getDate() + 3);
-                if (filteredEvents.length === 0) endDate.setDate(today.getDate() + 14);
+                // Vähintään 90 päivää eteenpäin
+                const minEnd = new Date(today);
+                minEnd.setDate(minEnd.getDate() + 90);
+                if (endDate < minEnd) endDate.setTime(minEnd.getTime());
+                if (filteredEvents.length === 0) endDate.setDate(today.getDate() + 90);
 
                 const days = [];
                 const cur = new Date(today);
