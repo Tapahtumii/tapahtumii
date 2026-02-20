@@ -1533,7 +1533,20 @@
         // PÄÄ-KOMPONENTTI
         // ============================================================
         const Tahtumii = () => {
-            const [selectedCity, setSelectedCity] = useState('Helsinki');
+            const getInitialCity = () => {
+                const host = window.location.hostname.toLowerCase();
+                if (host.includes('tampere')) return 'Tampere';
+                return 'Helsinki';
+            };
+            const [selectedCity, setSelectedCity] = useState(getInitialCity);
+
+            // Päivitä sivun otsikko kaupungin mukaan
+            useEffect(() => {
+                const cityName = selectedCity === 'Tampere' ? 'Tampere' : 'Helsinki';
+                document.title = `Tapahtumat ${cityName} — keikat, konsertit, urheilu | Tapahtumat ${cityName}`;
+                const metaDesc = document.querySelector('meta[name="description"]');
+                if (metaDesc) metaDesc.setAttribute('content', `Löydä tapahtumat ${cityName === 'Helsinki' ? 'Helsingissä' : 'Tampereella'}. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja lastentapahtumat — kaikki yhdessä paikassa.`);
+            }, [selectedCity]);
             const [selectedCategory, setSelectedCategory] = useState('Kaikki');
             const [expandedEvent, setExpandedEvent] = useState(null);
             const [currentScrollDate, setCurrentScrollDate] = useState(null);
@@ -1884,14 +1897,14 @@
                         {/* Logo keskellä */}
                         <div onClick={scrollToToday} style={{ cursor: 'pointer', textAlign: 'center', position: 'relative' }}>
                             <div style={{ 
-                                fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.5px', 
+                                fontSize: '1.3rem', fontWeight: 800, letterSpacing: '-0.5px', 
                                 background: 'linear-gradient(135deg, #A78BFA 0%, #EC4899 25%, #7C3AED 50%, #EC4899 75%, #A78BFA 100%)',
                                 backgroundSize: '200% 100%',
                                 animation: 'logoShine 6s ease-in-out infinite',
                                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', 
                                 position: 'relative',
                             }}>
-                                tapahtumii.com
+                                {selectedCity === 'Tampere' ? 'tapahtumat tampere' : 'tapahtumat helsinki'}
                             </div>
                             {/* Debug-info poistettu */}
                         </div>
