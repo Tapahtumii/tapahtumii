@@ -9,11 +9,21 @@
     <meta property="og:title" content="Tapahtumat Helsinki & Tampere — keikat, urheilu, jääkiekko | Tapahtumii" />
     <meta property="og:description" content="Löydä kaikki tapahtumat yhdestä paikasta. Keikat, konsertit, jääkiekko ja urheilu Helsingissä ja Tampereella." />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://tapahtumii.com" />
+    <meta property="og:url" content="https://tapahtumathelsinki.com" />
+    <link rel="canonical" href="https://tapahtumathelsinki.com" />
+    <script>
+        (function(){
+            var h = window.location.hostname.toLowerCase();
+            var url = 'https://' + h;
+            var c = document.querySelector('link[rel="canonical"]');
+            var o = document.querySelector('meta[property="og:url"]');
+            if (c) c.href = url;
+            if (o) o.content = url;
+        })();
+    </script>
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Tapahtumat Helsinki & Tampere | Tapahtumii" />
     <meta name="twitter:description" content="Keikat, konsertit, jääkiekko ja tapahtumat Helsingissä ja Tampereella." />
-    <link rel="canonical" href="https://tapahtumii.com" />
     <link rel="alternate" hreflang="fi" href="https://tapahtumii.fi" />
     <script type="application/ld+json">
     {
