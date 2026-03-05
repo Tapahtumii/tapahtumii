@@ -1821,8 +1821,8 @@
 
             const scrollToCenter = (ref, index) => {
                 if (ref.current) {
-                    const btns = ref.current.querySelectorAll('button');
-                    if (btns[index]) btns[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    const items = ref.current.querySelectorAll('a[role="button"]');
+                    if (items[index]) items[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 }
             };
 
