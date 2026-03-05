@@ -1,0 +1,40 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "tapahtumii.com" }],
+      "destination": "https://tapahtumathelsinki.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.tapahtumii.com" }],
+      "destination": "https://tapahtumathelsinki.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "tapahtumii.fi" }],
+      "destination": "https://tapahtumathelsinki.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.tapahtumii.fi" }],
+      "destination": "https://tapahtumathelsinki.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "tapahtumattampere.com" }],
+      "destination": "https://tapahtumathelsinki.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.tapahtumattampere.com" }],
+      "destination": "https://tapahtumathelsinki.com/:path*",
+      "permanent": true
+    }
+  ]
+}
