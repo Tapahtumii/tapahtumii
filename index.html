@@ -281,6 +281,16 @@
 </head>
 <body>
     <div id="root"></div>
+    <noscript>
+        <h1>Tapahtumat Helsinki & Tampere</h1>
+        <p>Löydä tapahtumat Helsingissä ja Tampereella — keikat, konsertit, urheilu, jääkiekko, SM-liiga, teatteri ja lastentapahtumat kaikki yhdessä paikassa.</p>
+        <nav>
+            <h2>Kaupungit</h2>
+            <ul><li><a href="https://tapahtumathelsinki.com">Tapahtumat Helsinki</a></li><li><a href="https://tapahtumattampere.com">Tapahtumat Tampere</a></li></ul>
+            <h2>Kategoriat</h2>
+            <ul><li>Musiikki — keikat, konsertit, jazz, rock, pop, heavy, elektroninen</li><li>Urheilu — jääkiekko, SM-liiga, Mestis, jalkapallo, koripallo, nyrkkeily</li><li>Kulttuuri — teatteri, ooppera, tanssi, komedia, stand-up, näyttelyt</li><li>Lapset — lastentapahtumat, perhetapahtumat</li></ul>
+        </nav>
+    </noscript>
 
     <script type="text/babel">
         const { useState, useRef, useEffect, useMemo, useCallback } = React;
@@ -2044,20 +2054,22 @@
                     {/* ====== ALAPALKKI ====== */}
                     <div className="bottom-nav" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30 }}>
                         {/* Kategoriat */}
-                        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', position: 'relative' }}>
+                        <nav aria-label="Tapahtumatyypit: musiikki, urheilu, kulttuuri, lapset" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', position: 'relative' }}>
                             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '60px', background: 'linear-gradient(to right, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.4) 60%, transparent 100%)', zIndex: 5, pointerEvents: 'none' }} />
                             <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '60px', background: 'linear-gradient(to left, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.4) 60%, transparent 100%)', zIndex: 5, pointerEvents: 'none' }} />
                             <div ref={categoryScrollRef} className="scrollbar-hide" style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '10px 16px', scrollSnapType: 'x mandatory', scrollBehavior: 'smooth', scrollPaddingLeft: '50%', scrollPaddingRight: '50%' }}>
                                 <div style={{ flexShrink: 0, width: 'calc(50vw - 60px)' }} />
                                 {categories.map((cat, idx) => (
-                                    <button
+                                    <a
                                         key={cat}
-                                        onClick={() => { setSelectedCategory(cat); scrollToCenter(categoryScrollRef, idx); setExpandedEvent(null);  }}
+                                        href={`#${cat.toLowerCase()}`}
+                                        role="button"
+                                        onClick={(e) => { e.preventDefault(); setSelectedCategory(cat); scrollToCenter(categoryScrollRef, idx); setExpandedEvent(null);  }}
                                         style={{
                                             flexShrink: 0, padding: '6px 16px',
                                             borderRadius: '20px', border: 'none',
                                             fontSize: '0.8rem', fontWeight: selectedCategory === cat ? 600 : 400,
-                                            fontFamily: 'Outfit',
+                                            fontFamily: 'Outfit', textDecoration: 'none',
                                             background: selectedCategory === cat ? 'rgba(139,92,246,0.8)' : 'rgba(255,255,255,0.06)',
                                             color: selectedCategory === cat ? '#fff' : 'rgba(255,255,255,0.45)',
                                             cursor: 'pointer', scrollSnapAlign: 'center',
@@ -2067,27 +2079,29 @@
                                         }}
                                     >
                                         {cat}
-                                    </button>
+                                    </a>
                                 ))}
                                 <div style={{ flexShrink: 0, width: 'calc(50vw - 60px)' }} />
                             </div>
-                        </div>
+                        </nav>
 
                         {/* Kaupungit */}
-                        <div style={{ position: 'relative' }}>
+                        <nav aria-label="Kaupungit: Helsinki, Tampere" style={{ position: 'relative' }}>
                             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '60px', background: 'linear-gradient(to right, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.4) 60%, transparent 100%)', zIndex: 5, pointerEvents: 'none' }} />
                             <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '60px', background: 'linear-gradient(to left, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.4) 60%, transparent 100%)', zIndex: 5, pointerEvents: 'none' }} />
                             <div ref={cityScrollRef} className="scrollbar-hide" style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '10px 16px', paddingBottom: '14px', scrollSnapType: 'x mandatory', scrollBehavior: 'smooth', scrollPaddingLeft: '50%', scrollPaddingRight: '50%' }}>
                                 <div style={{ flexShrink: 0, width: 'calc(50vw - 60px)' }} />
                                 {cities.map((city, idx) => (
-                                    <button
+                                    <a
                                         key={city}
-                                        onClick={() => { setSelectedCity(city); scrollToCenter(cityScrollRef, idx); setExpandedEvent(null);  }}
+                                        href={`#${city.toLowerCase()}`}
+                                        role="button"
+                                        onClick={(e) => { e.preventDefault(); setSelectedCity(city); scrollToCenter(cityScrollRef, idx); setExpandedEvent(null);  }}
                                         style={{
                                             flexShrink: 0, padding: '6px 16px',
                                             borderRadius: '20px', border: 'none',
                                             fontSize: '0.8rem', fontWeight: selectedCity === city ? 600 : 400,
-                                            fontFamily: 'Outfit',
+                                            fontFamily: 'Outfit', textDecoration: 'none',
                                             background: selectedCity === city ? 'rgba(59,130,246,0.7)' : 'rgba(255,255,255,0.06)',
                                             color: selectedCity === city ? '#fff' : 'rgba(255,255,255,0.45)',
                                             cursor: 'pointer', scrollSnapAlign: 'center',
@@ -2097,11 +2111,11 @@
                                         }}
                                     >
                                         {city}
-                                    </button>
+                                    </a>
                                 ))}
                                 <div style={{ flexShrink: 0, width: 'calc(50vw - 60px)' }} />
                             </div>
-                        </div>
+                        </nav>
 
                         {/* Safe area bottom (iPhone) */}
                         <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
