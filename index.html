@@ -1967,6 +1967,11 @@
                             {calendarDays.map(({ date, events: dayEvents }) => {
                                 const d = new Date(date);
                                 const isActive = date === currentScrollDate;
+                                const todayCheck = getTodayString();
+                                const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate() + 1);
+                                const tomorrowCheck = tomorrowD.toISOString().split('T')[0];
+                                const isToday = date === todayCheck;
+                                const isTomorrow = date === tomorrowCheck;
                                 
                                 // Sekoita kuplat
                                 const shuffled = [...dayEvents].sort((a, b) => {
@@ -1981,6 +1986,13 @@
 
                                 return (
                                     <div key={date} data-date={date} style={{ display: 'flex', alignItems: 'stretch' }}>
+                                        {/* SEO: tapahtumanimet tekstinä — näkyy Googlelle, piilotettu visuaalisesti */}
+                                        {dayEvents.length > 0 && (
+                                            <div aria-hidden="false" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
+                                                <h3>{isToday ? 'Tapahtumat tänään' : isTomorrow ? 'Tapahtumat huomenna' : `Tapahtumat ${d.getDate()}.${d.getMonth()+1}.`}</h3>
+                                                <ul>{dayEvents.map(e => <li key={e.id}>{e.title} — {e.venue || e.city}{e.time ? `, klo ${e.time}` : ''}</li>)}</ul>
+                                            </div>
+                                        )}
                                         {/* Kupla-sarake — kasvaa sisällön mukaan */}
                                         <div style={{ flex: 1, paddingLeft: '12px', paddingRight: '8px', paddingTop: '8px', paddingBottom: '8px', minHeight: dayEvents.length === 0 ? '100px' : '120px' }}>
                                             {visibleBubbles.map((event) => {
@@ -2037,6 +2049,8 @@
                                             <div style={{ fontSize: '0.55rem', opacity: isActive ? 0.7 : 0.5, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: isActive ? 600 : 400 }}>
                                                 {monthsShort[d.getMonth()]}
                                             </div>
+                                            {isToday && <span style={{ fontSize: '0.45rem', color: '#A78BFA', fontWeight: 700, letterSpacing: '0.5px', marginTop: '2px', textTransform: 'uppercase' }}>Tänään</span>}
+                                            {isTomorrow && <span style={{ fontSize: '0.45rem', color: 'rgba(167,139,250,0.6)', fontWeight: 600, letterSpacing: '0.5px', marginTop: '2px', textTransform: 'uppercase' }}>Huomenna</span>}
                                             {dayEvents.length > 0 && (
                                                 <div style={{ marginTop: '4px', display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '42px' }}>
                                                     {dayEvents.map(e => (
