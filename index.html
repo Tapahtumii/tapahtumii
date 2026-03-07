@@ -866,13 +866,15 @@
                 }
             }, [isExpanded]);
 
-            const handleTouchEnd = useCallback(() => {
+            const handleTouchEnd = useCallback((e) => {
                 if (dragState.current.isDragging) {
                     setIsDragging(false);
                     setOffset({ x: 0, y: 0 });
                     setTimeout(() => { dragState.current.isDragging = false; }, 100);
                 } else {
-                    
+                    // Älä sulje kuplaa jos kosketus osui nappiin tai linkkiin
+                    const target = e?.target;
+                    if (target && (target.closest('button') || target.closest('a'))) return;
                     onToggle(prev => prev === eventId ? null : eventId);
                 }
             }, [onToggle, eventId]);
