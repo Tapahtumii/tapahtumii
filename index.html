@@ -872,16 +872,21 @@
                     setOffset({ x: 0, y: 0 });
                     setTimeout(() => { dragState.current.isDragging = false; }, 100);
                 } else {
-                    // Älä sulje kuplaa jos kosketus osui nappiin tai linkkiin
-                    const target = e?.target;
-                    if (target && (target.closest('button') || target.closest('a'))) return;
+                    // Check native DOM path - if touch hit an <a> or action-buttons area, don't toggle
+                    const path = e.nativeEvent?.composedPath?.() || [];
+                    for (const el of path) {
+                        if (el.tagName === 'A' || el.dataset?.actionArea) return;
+                    }
                     onToggle(prev => prev === eventId ? null : eventId);
                 }
             }, [onToggle, eventId]);
 
             const handleClick = useCallback((e) => {
                 if (!('ontouchstart' in window)) {
-                    if (e?.target && (e.target.closest('button:not([data-bubble])') || e.target.closest('a'))) return;
+                    const path = e.nativeEvent?.composedPath?.() || [];
+                    for (const el of path) {
+                        if (el.tagName === 'A' || el.dataset?.actionArea) return;
+                    }
                     onToggle(prev => prev === eventId ? null : eventId);
                 }
             }, [onToggle, eventId]);
@@ -1063,15 +1068,21 @@
                                 )}
 
                                 {/* Toimintopainikkeet */}
-                                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                <div 
+                                    data-action-area="true"
+                                    style={{ display: 'flex', gap: '8px', marginTop: '10px' }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onTouchStart={(e) => e.stopPropagation()}
+                                    onTouchEnd={(e) => e.stopPropagation()}
+                                    onTouchMove={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                >
                                     {(event.ticketUrl || event.eventUrl) ? (
                                     <>
                                     <a 
                                         href={event.ticketUrl || event.eventUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        onTouchEnd={(e) => { e.stopPropagation(); }}
-                                        onClick={(e) => { e.stopPropagation(); }}
                                         style={{
                                             padding: '7px 16px',
                                             background: 'rgba(255,255,255,0.2)',
@@ -1081,18 +1092,15 @@
                                             cursor: 'pointer', display: 'flex',
                                             alignItems: 'center', gap: '4px',
                                             fontFamily: 'Outfit', textDecoration: 'none',
-                                            transition: 'background 0.2s, transform 0.15s',
                                         }}
                                     >
                                         <TicketIcon className="w-3 h-3" /> Liput
                                     </a>
-                                    {event.eventUrl && event.eventUrl !== event.ticketUrl && (
+                                    {event.eventUrl && (
                                     <a 
                                         href={event.eventUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        onTouchEnd={(e) => { e.stopPropagation(); }}
-                                        onClick={(e) => { e.stopPropagation(); }}
                                         style={{
                                             padding: '7px 16px',
                                             background: 'rgba(255,255,255,0.1)',
@@ -1102,7 +1110,6 @@
                                             cursor: 'pointer', display: 'flex',
                                             alignItems: 'center', gap: '4px',
                                             fontFamily: 'Outfit', textDecoration: 'none',
-                                            transition: 'background 0.2s, transform 0.15s',
                                         }}
                                     >
                                         <ExternalLinkIcon className="w-3 h-3" /> Info
