@@ -2,7 +2,7 @@
 <html lang="fi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tapahtumat Helsinki & Tampere — keikat, urheilu, jääkiekko | Tapahtumii</title>
     <meta name="description" content="Löydä tapahtumat Helsingissä ja Tampereella. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja lastentapahtumat — kaikki yhdessä paikassa. Tapahtumii.com" />
     <meta name="keywords" content="tapahtumat helsinki, tapahtumat tampere, keikat helsinki, keikat tampere, jääkiekko helsinki, jääkiekko tampere, konsertit, SM-liiga, Mestis, musiikki, urheilu, lastentapahtumat, Tavastia, G Livelab, Tavara-asema" />
@@ -48,14 +48,20 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html {
+            touch-action: pan-y;
+            overscroll-behavior: none;
+        }
         body { 
             font-family: 'Outfit', sans-serif; 
             overflow: hidden; 
             height: 100dvh;
             background: #0a0a12;
             color: #fff;
+            touch-action: pan-y;
+            overscroll-behavior: none;
         }
-        #root { height: 100dvh; }
+        #root { height: 100dvh; overscroll-behavior: none; }
 
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
