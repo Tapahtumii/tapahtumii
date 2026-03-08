@@ -161,7 +161,6 @@
 
         .bubble {
             cursor: pointer;
-            touch-action: none;
             user-select: none;
             transition: border-radius 0.35s cubic-bezier(0.25, 0.1, 0.25, 1),
                         width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1),
@@ -172,14 +171,14 @@
             -webkit-transform: translateZ(0);
         }
 
-        .bubble:active:not(.bubble-expanded) {
-            transform: scale(0.97);
-            transition: transform 0.1s ease;
-        }
-
         .bubble-expanded {
             border-radius: 50% !important;
             animation: none !important;
+        }
+
+        .bubble:active:not(.bubble-expanded) {
+            transform: scale(0.97);
+            transition: transform 0.1s ease;
         }
 
         /* Backdrop tummennus laajennetulle kuplalle */
@@ -272,11 +271,6 @@
         }
 
         /* Touch feedback */
-        .touch-dragging {
-            transition: none !important;
-            animation: none !important;
-            z-index: 999 !important;
-        }
     </style>
 </head>
 <body>
@@ -788,9 +782,6 @@
         // ============================================================
         const Bubble = React.memo(({ event, isExpanded, onToggle, eventId, animDelay, userProfile, onDelete }) => {
             const bubbleRef = useRef(null);
-            const dragState = useRef({ isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, velocityX: 0, lastX: 0, lastTime: 0 });
-            const [offset, setOffset] = useState({ x: 0, y: 0 });
-            const [isDragging, setIsDragging] = useState(false);
             const [contentVisible, setContentVisible] = useState(false);
             const hasAppeared = useRef(false);
 
@@ -825,70 +816,10 @@
                 }
             }, [isExpanded]);
 
-            // Touch-käsittely
-            const handleTouchStart = useCallback((e) => {
-                if (isExpanded) return;
-                const touch = e.touches[0];
-                dragState.current = {
-                    isDragging: false,
-                    startX: touch.clientX,
-                    startY: touch.clientY,
-                    currentX: 0,
-                    currentY: 0,
-                    velocityX: 0,
-                    lastX: touch.clientX,
-                    lastTime: Date.now()
-                };
-            }, [isExpanded]);
-
-            const handleTouchMove = useCallback((e) => {
-                if (isExpanded) return;
-                const touch = e.touches[0];
-                const dx = touch.clientX - dragState.current.startX;
-                const dy = touch.clientY - dragState.current.startY;
-                
-                if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-                    dragState.current.isDragging = true;
-                    setIsDragging(true);
-                    
-                    const now = Date.now();
-                    const dt = now - dragState.current.lastTime;
-                    if (dt > 0) {
-                        dragState.current.velocityX = (touch.clientX - dragState.current.lastX) / dt;
-                    }
-                    dragState.current.lastX = touch.clientX;
-                    dragState.current.lastTime = now;
-                }
-                
-                if (dragState.current.isDragging) {
-                    e.preventDefault();
-                    setOffset({ x: dx * 0.8, y: dy * 0.4 });
-                }
-            }, [isExpanded]);
-
-            const handleTouchEnd = useCallback((e) => {
-                if (dragState.current.isDragging) {
-                    setIsDragging(false);
-                    setOffset({ x: 0, y: 0 });
-                    setTimeout(() => { dragState.current.isDragging = false; }, 100);
-                } else {
-                    // Check native DOM path - if touch hit an <a> or action-buttons area, don't toggle
-                    const path = e.nativeEvent?.composedPath?.() || [];
-                    for (const el of path) {
-                        if (el.tagName === 'A' || el.dataset?.actionArea) return;
-                    }
-                    onToggle(prev => prev === eventId ? null : eventId);
-                }
-            }, [onToggle, eventId]);
-
-            const handleClick = useCallback((e) => {
-                if (!('ontouchstart' in window)) {
-                    const path = e.nativeEvent?.composedPath?.() || [];
-                    for (const el of path) {
-                        if (el.tagName === 'A' || el.dataset?.actionArea) return;
-                    }
-                    onToggle(prev => prev === eventId ? null : eventId);
-                }
+            const handleToggle = useCallback((e) => {
+                const t = e.target;
+                if (t && (t.closest?.('[data-action-area]') || t.closest?.('a') || t.tagName === 'A')) return;
+                onToggle(prev => prev === eventId ? null : eventId);
             }, [onToggle, eventId]);
 
             // Varmistetaan että laajennettu kupla näkyy kokonaan
@@ -945,19 +876,13 @@
                     style={{
                         marginLeft: isExpanded ? expandedMargin : `${randomLeft}%`,
                         animationDelay: !isExpanded ? `${cappedDelay * 0.04}s` : undefined,
-                        transform: `translate(${offset.x}px, ${offset.y}px)`,
                         maxWidth: isExpanded ? `${expandedSize}px` : `${baseSize}px`,
                         width: isExpanded ? `${expandedSize}px` : 'auto',
                         position: 'relative',
-                        zIndex: isExpanded ? 1000 : (isDragging ? 999 : 10),
-                        transition: isDragging
-                            ? 'none' 
-                            : 'margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), max-width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                        zIndex: isExpanded ? 1000 : 10,
+                        transition: 'margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), max-width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                     }}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                    onClick={handleClick}
+                    onClick={handleToggle}
                 >
                     {/* Admin quick-delete X — outside bubble overflow */}
                     {!isExpanded && userProfile?.role === 'admin' && (
@@ -989,7 +914,7 @@
                         >✕</button>
                     )}
                     <div
-                        className={`bubble ${isExpanded ? 'bubble-expanded' : (isDragging ? 'touch-dragging' : 'bubble-float')}`}
+                        className={`bubble ${isExpanded ? 'bubble-expanded' : 'bubble-float'}`}
                         style={{
                             width: isExpanded ? `${expandedSize}px` : `${baseSize}px`,
                             height: isExpanded ? `${expandedSize}px` : `${baseSize}px`,
