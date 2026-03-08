@@ -1598,6 +1598,21 @@
             const [selectedCategory, setSelectedCategory] = useState('Kaikki');
             const [expandedEvent, setExpandedEvent] = useState(null);
             const [currentScrollDate, setCurrentScrollDate] = useState(null);
+
+            // Estä iOS body-scroll kun kupla on auki
+            useEffect(() => {
+                if (expandedEvent) {
+                    const handler = (e) => {
+                        // Salli scrollaus vain scroll-containerin sisällä
+                        const scrollContainer = e.target.closest?.('.scrollbar-hide');
+                        if (!scrollContainer || scrollContainer.scrollHeight <= scrollContainer.clientHeight) {
+                            e.preventDefault();
+                        }
+                    };
+                    document.addEventListener('touchmove', handler, { passive: false });
+                    return () => document.removeEventListener('touchmove', handler);
+                }
+            }, [expandedEvent]);
             const [events, setEvents] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [dataSource, setDataSource] = useState('demo'); // 'demo' | 'live'
