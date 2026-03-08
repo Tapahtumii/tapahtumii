@@ -818,7 +818,20 @@
 
             const handleToggle = useCallback((e) => {
                 const t = e.target;
-                if (t && (t.closest?.('[data-action-area]') || t.closest?.('a') || t.tagName === 'A')) return;
+                const tag = t?.tagName;
+                const closestA = !!t?.closest?.('a');
+                const closestAction = !!t?.closest?.('[data-action-area]');
+                const href = t?.closest?.('a')?.href || 'none';
+                const debugMsg = `tag=${tag} closestA=${closestA} closestAction=${closestAction} href=${href}`;
+                
+                // TEMPORARY DEBUG - remove after fixing
+                if (typeof window.__bubbleDebug === 'undefined') window.__bubbleDebug = [];
+                window.__bubbleDebug.push(debugMsg);
+                document.title = debugMsg;
+                
+                if (t && (closestAction || closestA || tag === 'A')) {
+                    return;
+                }
                 onToggle(prev => prev === eventId ? null : eventId);
             }, [onToggle, eventId]);
 
@@ -2004,8 +2017,15 @@
                                 );
                             })}
                         </div>
-                    </div>
 
+                        {/* Klikkialue kuplan sulkemiseen — scroll-containerin sisällä */}
+                        {expandedEvent && (
+                            <div 
+                                onClick={() => setExpandedEvent(null)}
+                                style={{ position: 'fixed', inset: 0, zIndex: 500 }}
+                            />
+                        )}
+                    </div>
                     {/* ====== ALAPALKKI ====== */}
                     <div className="bottom-nav" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30 }}>
                         {/* Kategoriat */}
@@ -2075,14 +2095,6 @@
                         {/* Safe area bottom (iPhone) */}
                         <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
                     </div>
-
-                    {/* Klikkialue kuplan sulkemiseen */}
-                    {expandedEvent && (
-                        <div 
-                            onClick={() => setExpandedEvent(null)}
-                            style={{ position: 'fixed', inset: 0, zIndex: 5 }}
-                        />
-                    )}
 
                     {/* Modaalit */}
                     <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} onAuth={setUser} />
