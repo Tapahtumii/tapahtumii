@@ -244,6 +244,77 @@
                 linear-gradient(180deg, #0a0a12 0%, #0d0d1a 100%);
         }
 
+        /* Spottivalot — logon värit */
+        .spotlight-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .spotlight {
+            position: absolute;
+            width: 40vmax;
+            height: 40vmax;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.07;
+            will-change: transform, opacity;
+        }
+
+        .spotlight-blue {
+            background: radial-gradient(circle, rgba(60, 140, 255, 0.8) 0%, transparent 70%);
+            top: -10%;
+            left: -5%;
+            animation: spotDrift1 25s ease-in-out infinite;
+        }
+
+        .spotlight-violet {
+            background: radial-gradient(circle, rgba(160, 80, 220, 0.8) 0%, transparent 70%);
+            top: 10%;
+            right: -10%;
+            animation: spotDrift2 30s ease-in-out infinite;
+        }
+
+        .spotlight-orange {
+            background: radial-gradient(circle, rgba(240, 160, 50, 0.6) 0%, transparent 70%);
+            bottom: 5%;
+            right: 10%;
+            animation: spotDrift3 28s ease-in-out infinite;
+        }
+
+        .spotlight-pink {
+            background: radial-gradient(circle, rgba(220, 80, 160, 0.6) 0%, transparent 70%);
+            bottom: -5%;
+            left: 5%;
+            animation: spotDrift4 32s ease-in-out infinite;
+        }
+
+        @keyframes spotDrift1 {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.07; }
+            30% { transform: translate(8vw, 12vh) scale(1.1); opacity: 0.10; }
+            60% { transform: translate(-5vw, 5vh) scale(0.9); opacity: 0.05; }
+        }
+
+        @keyframes spotDrift2 {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.07; }
+            40% { transform: translate(-10vw, 8vh) scale(1.15); opacity: 0.09; }
+            70% { transform: translate(3vw, -5vh) scale(0.95); opacity: 0.05; }
+        }
+
+        @keyframes spotDrift3 {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.06; }
+            35% { transform: translate(-8vw, -10vh) scale(1.1); opacity: 0.09; }
+            65% { transform: translate(5vw, -3vh) scale(0.85); opacity: 0.04; }
+        }
+
+        @keyframes spotDrift4 {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.06; }
+            45% { transform: translate(10vw, -8vh) scale(1.2); opacity: 0.08; }
+            75% { transform: translate(-3vw, 5vh) scale(0.9); opacity: 0.04; }
+        }
+
         /* Alapalkki */
         .bottom-nav {
             backdrop-filter: blur(30px) saturate(150%);
@@ -1824,7 +1895,14 @@
             let bubbleIndex = 0;
 
             return (
-                <div className="bg-gradient-mesh" style={{ height: '100dvh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+                <div className="bg-gradient-mesh" style={{ height: '100dvh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', touchAction: 'none' }}>
+                    {/* Spottivalot */}
+                    <div className="spotlight-container">
+                        <div className="spotlight spotlight-blue" />
+                        <div className="spotlight spotlight-violet" />
+                        <div className="spotlight spotlight-orange" />
+                        <div className="spotlight spotlight-pink" />
+                    </div>
 
                     {/* ====== LOADING SCREEN ====== */}
                     {!loadingDone && (
@@ -1906,7 +1984,7 @@
                             }
                         }}
                         className="scrollbar-hide"
-                        style={{ flex: 1, overflowY: 'auto', paddingBottom: '140px', position: 'relative' }}
+                        style={{ flex: 1, overflowY: 'auto', paddingBottom: '140px', position: 'relative', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
                     >
 
                         {/* Iso päivämäärä taustalla */}
