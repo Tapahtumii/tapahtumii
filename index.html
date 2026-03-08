@@ -872,7 +872,7 @@
                 <>
                 <div
                     ref={bubbleRef}
-                    className={`mb-3 ${(!isExpanded && !hasAppeared.current) ? 'bubble-appear' : ''}`}
+                    className={`bubble mb-3 ${(!isExpanded && !hasAppeared.current) ? 'bubble-appear' : ''}`}
                     style={{
                         marginLeft: isExpanded ? expandedMargin : `${randomLeft}%`,
                         animationDelay: !isExpanded ? `${cappedDelay * 0.04}s` : undefined,
@@ -1886,16 +1886,14 @@
                     <div 
                         ref={mainScrollRef}
                         onScroll={handleScroll}
+                        onClick={(e) => {
+                            if (expandedEvent && !e.target.closest?.('.bubble') && !e.target.closest?.('[data-action-area]') && !e.target.closest?.('a')) {
+                                setExpandedEvent(null);
+                            }
+                        }}
                         className="scrollbar-hide"
                         style={{ flex: 1, overflowY: 'auto', paddingBottom: '140px', position: 'relative' }}
                     >
-                        {/* Klikkialue kuplan sulkemiseen — kuplan ALLA, samassa stacking contextissa */}
-                        {expandedEvent && (
-                            <div 
-                                onClick={() => setExpandedEvent(null)}
-                                style={{ position: 'absolute', inset: 0, zIndex: 500, minHeight: '100%' }}
-                            />
-                        )}
 
                         {/* Iso päivämäärä taustalla */}
                         <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 0, opacity: 0.06 }}>
