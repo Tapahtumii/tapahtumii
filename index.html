@@ -881,6 +881,7 @@
 
             const handleClick = useCallback((e) => {
                 if (!('ontouchstart' in window)) {
+                    if (e?.target && (e.target.closest('button:not([data-bubble])') || e.target.closest('a'))) return;
                     onToggle(prev => prev === eventId ? null : eventId);
                 }
             }, [onToggle, eventId]);
@@ -1066,6 +1067,7 @@
                                     {(event.ticketUrl || event.eventUrl) && (
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); window.open(event.ticketUrl || event.eventUrl, '_blank'); }}
+                                        onTouchEnd={(e) => { e.stopPropagation(); }}
                                         style={{
                                             padding: '7px 16px',
                                             background: 'rgba(255,255,255,0.2)',
@@ -1086,6 +1088,7 @@
                                     {event.eventUrl && (
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); window.open(event.eventUrl, '_blank'); }}
+                                        onTouchEnd={(e) => { e.stopPropagation(); }}
                                         style={{
                                             padding: '7px 16px',
                                             background: 'rgba(255,255,255,0.1)',
