@@ -1909,6 +1909,14 @@
                         className="scrollbar-hide"
                         style={{ flex: 1, overflowY: 'auto', paddingBottom: '140px', position: 'relative' }}
                     >
+                        {/* Klikkialue kuplan sulkemiseen — kuplan ALLA, samassa stacking contextissa */}
+                        {expandedEvent && (
+                            <div 
+                                onClick={() => setExpandedEvent(null)}
+                                style={{ position: 'absolute', inset: 0, zIndex: 500, minHeight: '100%' }}
+                            />
+                        )}
+
                         {/* Iso päivämäärä taustalla */}
                         <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 0, opacity: 0.06 }}>
                             <div style={{ fontSize: '12rem', fontWeight: 800, lineHeight: 1, textAlign: 'center' }}>{dateInfo.day}</div>
@@ -2026,15 +2034,8 @@
                                 );
                             })}
                         </div>
-
-                        {/* Klikkialue kuplan sulkemiseen — scroll-containerin sisällä */}
-                        {expandedEvent && (
-                            <div 
-                                onClick={() => setExpandedEvent(null)}
-                                style={{ position: 'fixed', inset: 0, zIndex: 500 }}
-                            />
-                        )}
                     </div>
+
                     {/* ====== ALAPALKKI ====== */}
                     <div className="bottom-nav" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30 }}>
                         {/* Kategoriat */}
