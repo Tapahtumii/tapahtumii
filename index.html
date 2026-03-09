@@ -1599,18 +1599,20 @@
             const [expandedEvent, setExpandedEvent] = useState(null);
             const [currentScrollDate, setCurrentScrollDate] = useState(null);
 
-            // Estä iOS body-scroll kun kupla on auki
+            // Estä kaikki scrollaus kun kupla on auki
             useEffect(() => {
                 if (expandedEvent) {
-                    const handler = (e) => {
-                        // Salli scrollaus vain scroll-containerin sisällä
-                        const scrollContainer = e.target.closest?.('.scrollbar-hide');
-                        if (!scrollContainer || scrollContainer.scrollHeight <= scrollContainer.clientHeight) {
-                            e.preventDefault();
-                        }
+                    const prevent = (e) => e.preventDefault();
+                    document.addEventListener('touchmove', prevent, { passive: false });
+                    document.body.style.overflow = 'hidden';
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                    return () => {
+                        document.removeEventListener('touchmove', prevent);
+                        document.body.style.overflow = '';
+                        document.body.style.position = '';
+                        document.body.style.width = '';
                     };
-                    document.addEventListener('touchmove', handler, { passive: false });
-                    return () => document.removeEventListener('touchmove', handler);
                 }
             }, [expandedEvent]);
             const [events, setEvents] = useState([]);
