@@ -1602,16 +1602,22 @@
             // Estä kaikki scrollaus kun kupla on auki
             useEffect(() => {
                 if (expandedEvent) {
+                    const scrollY = window.scrollY;
                     const prevent = (e) => e.preventDefault();
                     document.addEventListener('touchmove', prevent, { passive: false });
                     document.body.style.overflow = 'hidden';
                     document.body.style.position = 'fixed';
-                    document.body.style.width = '100%';
+                    document.body.style.top = `-${scrollY}px`;
+                    document.body.style.left = '0';
+                    document.body.style.right = '0';
                     return () => {
                         document.removeEventListener('touchmove', prevent);
                         document.body.style.overflow = '';
                         document.body.style.position = '';
-                        document.body.style.width = '';
+                        document.body.style.top = '';
+                        document.body.style.left = '';
+                        document.body.style.right = '';
+                        window.scrollTo(0, scrollY);
                     };
                 }
             }, [expandedEvent]);
@@ -2020,7 +2026,7 @@
 
                         {/* Aikajanan lasiefekti-tausta (kiinteä oikealla) */}
                         <div style={{
-                            position: 'fixed', top: '58px', bottom: 0, right: 0,
+                            position: 'fixed', top: 0, bottom: 0, right: 0,
                             width: '56px', zIndex: 0, pointerEvents: 'none',
                             background: 'linear-gradient(180deg, rgba(140,100,240,0.08) 0%, rgba(80,60,180,0.05) 30%, rgba(255,255,255,0.04) 60%, rgba(140,100,240,0.06) 100%)',
                             backdropFilter: 'blur(12px) saturate(150%)',
