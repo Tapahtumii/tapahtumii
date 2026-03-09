@@ -1657,6 +1657,19 @@
             const [showAddEvent, setShowAddEvent] = useState(false);
             const [showAdmin, setShowAdmin] = useState(false);
 
+            // Salainen kirjautumisreitti: #admin
+            useEffect(() => {
+                const checkHash = () => {
+                    if (window.location.hash === '#admin') {
+                        setShowAuth(true);
+                        window.history.replaceState(null, '', window.location.pathname);
+                    }
+                };
+                checkHash();
+                window.addEventListener('hashchange', checkHash);
+                return () => window.removeEventListener('hashchange', checkHash);
+            }, []);
+
             const mainScrollRef = useRef(null);
             const cityScrollRef = useRef(null);
             const categoryScrollRef = useRef(null);
@@ -1982,12 +1995,8 @@
                         </div>
 
                         {/* Käyttäjä-ikoni oikealle */}
-                        {user ? (
+                        {user && (
                             <UserMenu user={user} profile={userProfile} onLogout={handleLogout} onShowAdmin={() => setShowAdmin(true)} />
-                        ) : (
-                            <button onClick={() => setShowAuth(true)} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                <UserIcon className="w-4 h-4 text-white/70" />
-                            </button>
                         )}
                     </div>
 
