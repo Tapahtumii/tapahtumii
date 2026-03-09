@@ -367,7 +367,7 @@
             <h2>Kaupungit</h2>
             <ul><li><a href="https://tapahtumathelsinki.com">Tapahtumat Helsinki</a></li><li><a href="https://tapahtumattampere.com">Tapahtumat Tampere</a></li></ul>
             <h2>Kategoriat</h2>
-            <ul><li>Musiikki — keikat, konsertit, jazz, rock, pop, heavy, elektroninen</li><li>Urheilu — jääkiekko, SM-liiga, Mestis, jalkapallo, koripallo, nyrkkeily</li><li>Kulttuuri — teatteri, ooppera, tanssi, komedia, stand-up, näyttelyt</li><li>Lapset — lastentapahtumat, perhetapahtumat</li></ul>
+            <ul><li>Keikat — keikat, konsertit, jazz, rock, pop, heavy, elektroninen</li><li>Urheilu — jääkiekko, SM-liiga, Mestis, jalkapallo, koripallo, nyrkkeily</li><li>Kulttuuri — teatteri, ooppera, tanssi, komedia, stand-up, näyttelyt</li><li>Lapset — lastentapahtumat, perhetapahtumat</li></ul>
         </nav>
     </noscript>
 
@@ -1585,7 +1585,7 @@
             // Päivitä sivun otsikko kaupungin mukaan
             useEffect(() => {
                 const cityName = selectedCity === 'Tampere' ? 'Tampere' : 'Helsinki';
-                document.title = `Tapahtumat ${cityName} — keikat, konsertit, urheilu | Tapahtumat ${cityName}`;
+                document.title = `Tapahtumat ${cityName} — keikat, konsertit, urheilu | Tapahtumii`;
                 const metaDesc = document.querySelector('meta[name="description"]');
                 if (metaDesc) metaDesc.setAttribute('content', `Löydä tapahtumat ${cityName === 'Helsinki' ? 'Helsingissä' : 'Tampereella'}. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja lastentapahtumat — kaikki yhdessä paikassa.`);
             }, [selectedCity]);
@@ -2126,7 +2126,7 @@
                     {/* ====== ALAPALKKI ====== */}
                     <div className="bottom-nav" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30 }}>
                         {/* Kategoriat */}
-                        <nav aria-label="Tapahtumatyypit: musiikki, urheilu, kulttuuri, lapset" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', position: 'relative' }}>
+                        <nav aria-label="Tapahtumatyypit: keikat, urheilu, kulttuuri, lapset" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', position: 'relative' }}>
                             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '60px', background: 'linear-gradient(to right, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.4) 60%, transparent 100%)', zIndex: 5, pointerEvents: 'none' }} />
                             <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '60px', background: 'linear-gradient(to left, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.4) 60%, transparent 100%)', zIndex: 5, pointerEvents: 'none' }} />
                             <div ref={categoryScrollRef} className="scrollbar-hide" style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '10px 16px', scrollSnapType: 'x mandatory', scrollBehavior: 'smooth', scrollPaddingLeft: '50%', scrollPaddingRight: '50%' }}>
@@ -2150,7 +2150,7 @@
                                             transform: selectedCategory === cat ? 'scale(1.05)' : 'scale(1)'
                                         }}
                                     >
-                                        {cat}
+                                        {cat === 'Musiikki' ? 'Keikat' : cat}
                                     </a>
                                 ))}
                                 <div style={{ flexShrink: 0, width: 'calc(50vw - 60px)' }} />
