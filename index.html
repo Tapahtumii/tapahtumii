@@ -358,6 +358,30 @@
     </style>
 </head>
 <body>
+    <!-- LCP-elementti: näkyy heti ilman JavaScriptiä, häviää kun React lataa -->
+    <div id="static-lcp" style="
+        position:fixed;inset:0;z-index:10000;
+        display:flex;flex-direction:column;
+        align-items:center;justify-content:center;
+        background:linear-gradient(180deg,#0a0a12 0%,#0d0d1a 100%);
+        gap:24px;
+    ">
+        <img src="/favicon.png" alt="Tapahtumii" width="100" height="100" style="border-radius:50%;box-shadow:0 0 40px rgba(139,92,246,0.5);" fetchpriority="high">
+        <h1 style="
+            font-family:'Outfit',sans-serif;font-size:1.4rem;font-weight:800;
+            background:linear-gradient(90deg,#e879f9,#a78bfa,#60a5fa);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            background-clip:text;margin:0;letter-spacing:-0.5px;
+        ">tapahtumat helsinki</h1>
+    </div>
+    <script>
+        // Piilotetaan staattinen LCP-elementti kun React on valmis
+        window.__hideLCPElement = function() {
+            var el = document.getElementById('static-lcp');
+            if (el) { el.style.opacity='0'; el.style.transition='opacity 0.3s'; setTimeout(function(){ el.remove(); }, 300); }
+        };
+    </script>
+
     <div id="root"></div>
     <noscript>
         <h1>Tapahtumat Helsinki & Tampere</h1>
@@ -2125,7 +2149,11 @@ const Bubble = React.memo(({
   const baseSize = 85 + sizeVar * 18;
 
   // Satunnainen vaaka-asema
-  const randomLeft = (numId * 31 + numId * 11 + numId * 67) % 65;
+  // Kupla sijainti: painotetaan keskialuetta, leviää tasaisesti molempiin suuntiin
+  const _raw = (numId * 31 + numId * 11 + numId * 67) % 100;
+  const _normalized = Math.sin((_raw / 100) * Math.PI); // huippu keskellä
+  const _jitter = ((numId * 17 + numId * 53) % 21) - 10; // -10..+10 satunnaisuus
+  const randomLeft = Math.max(8, Math.min(72, 15 + Math.round(_normalized * 50) + _jitter));
 
   // Cap animation delay to avoid excessive stagger
   const cappedDelay = Math.min(animDelay, 15);
@@ -4496,6 +4524,7 @@ const Tahtumii = () => {
 };
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(/*#__PURE__*/React.createElement(Tahtumii, null));
+if (window.__hideLCPElement) window.__hideLCPElement();
 
     </script>
 </body>
