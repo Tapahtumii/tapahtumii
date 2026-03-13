@@ -228,17 +228,6 @@
 
         /* Tausta-efektit */
         .bg-gradient-mesh {
-            background: transparent;
-        }
-
-        /* Kiinteä tausta — ei kutistu koskaan */
-        .bg-fixed-layer {
-            position: fixed;
-            inset: 0;
-            width: 100vw;
-            height: 100vh;
-            pointer-events: none;
-            z-index: 0;
             background:
                 radial-gradient(ellipse at 20% 50%, rgba(120, 60, 200, 0.15) 0%, transparent 50%),
                 radial-gradient(ellipse at 80% 20%, rgba(60, 100, 220, 0.12) 0%, transparent 50%),
@@ -3982,7 +3971,7 @@ const Tahtumii = () => {
       overflow: 'hidden',
       touchAction: 'none'
     }
-  }, /*#__PURE__*/React.createElement("div", { className: "bg-fixed-layer" }), /*#__PURE__*/React.createElement("canvas", {
+  }, /*#__PURE__*/React.createElement("canvas", {
     id: "spotlight-canvas"
   }), !loadingDone && /*#__PURE__*/React.createElement("div", {
     className: `loading-screen ${!isLoading ? 'fade-out' : ''}`,
