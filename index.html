@@ -2134,7 +2134,9 @@ const Bubble = React.memo(({
   const _raw = (numId * 31 + numId * 11 + numId * 67) % 100;
   const _normalized = Math.sin((_raw / 100) * Math.PI); // huippu keskellä
   const _jitter = ((numId * 17 + numId * 53) % 21) - 10; // -10..+10 satunnaisuus
-  const randomLeft = Math.max(8, Math.min(72, 15 + Math.round(_normalized * 50) + _jitter));
+  const isMob = typeof window !== 'undefined' && window.innerWidth < 768;
+  const _maxLeft = isMob ? 58 : 72; // mobiilissa rajataan kauas kalenteripalkista
+  const randomLeft = Math.max(8, Math.min(_maxLeft, 15 + Math.round(_normalized * 50) + _jitter));
 
   // Cap animation delay to avoid excessive stagger
   const cappedDelay = Math.min(animDelay, 15);
@@ -4524,6 +4526,7 @@ root.render(/*#__PURE__*/React.createElement(Tahtumii, null));
             const palettes=['#b080ff','#40c8f0','#ffcc44','#ff70b0','#ffffff','#80b0ff','#ff9060'];
             const dots=Array.from({length:55},(_,i)=>{
                 const big=i<8;
+                const blinker=!big&&Math.random()<0.30;
                 return {
                     x:Math.random(), y:Math.random()*0.88,
                     freq:0.08+Math.random()*0.18,
@@ -4535,25 +4538,55 @@ root.render(/*#__PURE__*/React.createElement(Tahtumii, null));
                     cross:!big&&Math.random()<0.15,
                     driftPhase:Math.random()*Math.PI*2,
                     driftAmp:0.002+Math.random()*0.003,
+                    blinker,
+                    blinkState:'on', blinkT:0, blinkDur:0,
+                    blinkNext:8+Math.random()*20,
+                    blinkFadeDur:1.5+Math.random()*2,
+                    blinkOffDur:1.0+Math.random()*4,
+                    blinkMult:1.0,
                 };
             });
 
+            const DT=1/60;
+            function updateBlink(d){
+                if(!d.blinker) return;
+                d.blinkT+=DT;
+                if(d.blinkState==='on'){
+                    d.blinkMult=1.0;
+                    if(d.blinkT>=d.blinkNext){d.blinkState='fading';d.blinkT=0;d.blinkDur=d.blinkFadeDur;}
+                } else if(d.blinkState==='fading'){
+                    d.blinkMult=Math.max(0,1-d.blinkT/d.blinkDur);
+                    if(d.blinkT>=d.blinkDur){d.blinkState='off';d.blinkT=0;d.blinkDur=d.blinkOffDur;d.blinkMult=0;}
+                } else if(d.blinkState==='off'){
+                    d.blinkMult=0;
+                    if(d.blinkT>=d.blinkDur){d.blinkState='appearing';d.blinkT=0;d.blinkDur=d.blinkFadeDur*0.8;}
+                } else if(d.blinkState==='appearing'){
+                    d.blinkMult=Math.min(1,d.blinkT/d.blinkDur);
+                    if(d.blinkT>=d.blinkDur){d.blinkState='on';d.blinkT=0;d.blinkNext=10+Math.random()*25;d.blinkOffDur=0.8+Math.random()*5;d.blinkMult=1.0;}
+                }
+            }
+
             let t=0;
             function anim(){
-                t+=0.008;
+                t+=DT;
                 ctx.clearRect(0,0,canvas.width,canvas.height);
                 dots.forEach(d=>{
-                    const op=d.baseOp+d.ampOp*Math.sin(t*d.freq*Math.PI*2+d.phase);
+                    updateBlink(d);
+                    const pulse=d.baseOp+d.ampOp*Math.sin(t*d.freq*Math.PI*2+d.phase);
+                    const scale=1+0.25*Math.sin(t*d.freq*Math.PI*2+d.phase+Math.PI*0.5);
+                    const op=pulse*d.blinkMult;
+                    if(op<=0.001) return;
+                    const r=d.r*scale;
                     const cx=(d.x+d.driftAmp*Math.sin(t*0.05+d.driftPhase))*canvas.width;
                     const cy=d.y*canvas.height;
                     if(d.cross){
                         ctx.strokeStyle=rgba(d.col,op*0.85); ctx.lineWidth=0.6;
-                        ctx.beginPath(); ctx.moveTo(cx-d.r*2.2,cy); ctx.lineTo(cx+d.r*2.2,cy);
-                        ctx.moveTo(cx,cy-d.r*2.2); ctx.lineTo(cx,cy+d.r*2.2); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(cx-r*2.2,cy); ctx.lineTo(cx+r*2.2,cy);
+                        ctx.moveTo(cx,cy-r*2.2); ctx.lineTo(cx,cy+r*2.2); ctx.stroke();
                     }
-                    const gr=ctx.createRadialGradient(cx,cy,0,cx,cy,d.r*(d.r>2?4.5:3.0));
+                    const gr=ctx.createRadialGradient(cx,cy,0,cx,cy,r*(r>2?4.5:3.0));
                     gr.addColorStop(0,rgba(d.col,op)); gr.addColorStop(0.35,rgba(d.col,op*0.4)); gr.addColorStop(1,rgba(d.col,0));
-                    ctx.beginPath(); ctx.arc(cx,cy,d.r*(d.r>2?4.5:3.0),0,Math.PI*2); ctx.fillStyle=gr; ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx,cy,r*(r>2?4.5:3.0),0,Math.PI*2); ctx.fillStyle=gr; ctx.fill();
                 });
                 requestAnimationFrame(anim);
             }
