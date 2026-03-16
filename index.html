@@ -3814,6 +3814,77 @@ const Tahtumii = () => {
   useEffect(() => {
     refreshDbEvents();
   }, []);
+
+  // Haetaan Tiketti-tapahtumat frontendistä (Edge Function ei pääse tiketti.fi:hin)
+  useEffect(() => {
+    if (!sb) return;
+    const fetchAndSaveTiketti = async () => {
+      try {
+        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.tiketti.fi/feed/429843696');
+        const res = await fetch(proxyUrl);
+        if (!res.ok) { console.warn('[Tiketti] proxy status', res.status); return; }
+        const xml = await res.text();
+        const today = new Date().toISOString().split('T')[0];
+        const itemRe = /<item>([\s\S]*?)<\/item>/g;
+        const grouped = new Map();
+        let m;
+        while ((m = itemRe.exec(xml)) !== null) {
+          const item = m[1];
+          const get = (tag) => {
+            const x = item.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`));
+            return x ? (x[1] || x[2] || '').trim() : '';
+          };
+          const title = get('title');
+          const short_name = get('short_name') || title;
+          const startdate = get('startdate') || get('pubDate');
+          if (!title || !startdate) continue;
+          const date = startdate.includes('T') ? startdate.split('T')[0] : startdate.split(' ')[0];
+          if (date < today) continue;
+          const rawCat = get('categories').toLowerCase();
+          let category = 'Kulttuuri', subcategory = 'Kulttuuri';
+          if (rawCat.includes('musiikki')) { category = 'Musiikki'; subcategory = 'Musiikki'; }
+          else if (rawCat.includes('urheilu')) { category = 'Urheilu'; subcategory = 'Urheilu'; }
+          else if (rawCat.includes('lapset') || rawCat.includes('perhe')) { category = 'Lapset'; subcategory = 'Lapset'; }
+          const key = `${short_name.substring(0, 60)}_${date}`;
+          if (!grouped.has(key)) {
+            grouped.set(key, {
+              title: short_name.substring(0, 255),
+              description: `Tiketti: ${short_name}`,
+              city: get('city') || 'Helsinki',
+              venue: get('venue').substring(0, 255),
+              address: '',
+              category, subcategory,
+              start_date: date,
+              start_time: startdate.includes('T') ? startdate.split('T')[1]?.slice(0, 5) : null,
+              end_date: null, end_time: null,
+              price: get('price').substring(0, 100),
+              ticket_url: get('link').substring(0, 500),
+              event_url: get('link').substring(0, 500),
+              image_url: get('image').substring(0, 500),
+              source: 'tiketti',
+              source_id: `tiketti-${key.replace(/[^a-z0-9]/gi, '-').substring(0, 80)}`,
+              status: 'auto_approved',
+            });
+          }
+        }
+        const events = [...grouped.values()];
+        if (events.length === 0) { console.log('[Tiketti] 0 tapahtumaa'); return; }
+        // Upsert Supabaseen — source+source_id estää duplikaatit
+        for (let i = 0; i < events.length; i += 50) {
+          const batch = events.slice(i, i + 50);
+          const { error } = await sb.from('events').upsert(batch, { onConflict: 'source,source_id', ignoreDuplicates: false });
+          if (error) console.warn('[Tiketti] upsert virhe:', error.message);
+        }
+        console.log(`[Tiketti] ${events.length} tapahtumaa tallennettu`);
+        // Päivitetään näkymä
+        refreshDbEvents();
+      } catch (e) {
+        console.warn('[Tiketti] haku epäonnistui:', e);
+      }
+    };
+    fetchAndSaveTiketti();
+  }, []);
+
   const allEvents = events;
   const handleLogout = () => {
     setUser(null);
