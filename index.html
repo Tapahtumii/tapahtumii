@@ -3815,12 +3815,12 @@ const Tahtumii = () => {
     refreshDbEvents();
   }, []);
 
-  // Haetaan Tiketti-tapahtumat frontendistä (Edge Function ei pääse tiketti.fi:hin)
+  // Haetaan Tiketti-tapahtumat frontendistä corsproxy kautta
   useEffect(() => {
     if (!sb) return;
     const fetchAndSaveTiketti = async () => {
       try {
-        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.tiketti.fi/feed/429843696');
+        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://www.tiketti.fi/feed/429843696');
         const res = await fetch(proxyUrl);
         if (!res.ok) { console.warn('[Tiketti] proxy status', res.status); return; }
         const xml = await res.text();
@@ -3867,19 +3867,17 @@ const Tahtumii = () => {
             });
           }
         }
-        const events = [...grouped.values()];
-        if (events.length === 0) { console.log('[Tiketti] 0 tapahtumaa'); return; }
-        // Upsert Supabaseen — source+source_id estää duplikaatit
-        for (let i = 0; i < events.length; i += 50) {
-          const batch = events.slice(i, i + 50);
+        const tikettiEvents = [...grouped.values()];
+        if (tikettiEvents.length === 0) { console.log('[Tiketti] 0 tapahtumaa'); return; }
+        for (let i = 0; i < tikettiEvents.length; i += 50) {
+          const batch = tikettiEvents.slice(i, i + 50);
           const { error } = await sb.from('events').upsert(batch, { onConflict: 'source,source_id', ignoreDuplicates: false });
           if (error) console.warn('[Tiketti] upsert virhe:', error.message);
         }
-        console.log(`[Tiketti] ${events.length} tapahtumaa tallennettu`);
-        // Päivitetään näkymä
+        console.log(`[Tiketti] ${tikettiEvents.length} tapahtumaa tallennettu`);
         refreshDbEvents();
       } catch (e) {
-        console.warn('[Tiketti] haku epäonnistui:', e);
+        console.warn('[Tiketti] haku epäonnistui: ', e);
       }
     };
     fetchAndSaveTiketti();
