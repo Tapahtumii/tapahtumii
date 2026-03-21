@@ -24,8 +24,7 @@ jobs:
           if (!res.ok) { console.error('Tiketti status:', res.status); process.exit(1); }
           const xml = await res.text();
           console.log('Feed haettu, koko:', xml.length, 'merkkiä');
-          console.log('Feed alku:', xml.substring(0, 500));
-          console.log('Feed loppu:', xml.substring(xml.length - 500));
+          console.log('Feed alku:', xml.substring(0, 800));
 
           const today = new Date().toISOString().split('T')[0];
           const itemRe = /<item>([\s\S]*?)<\/item>/g;
@@ -73,11 +72,8 @@ jobs:
           const events = [...grouped.values()];
           console.log('Tapahtumia:', events.length);
           if (events.length === 0) { console.log('Ei tapahtumia, lopetetaan'); process.exit(0); }
-
           const SUPABASE_URL = process.env.SUPABASE_URL;
           const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-
-          // Poistetaan vanhat Tiketti-tapahtumat
           const delRes = await fetch(SUPABASE_URL + '/rest/v1/events?source=eq.tiketti', {
             method: 'DELETE',
             headers: {
@@ -86,8 +82,6 @@ jobs:
             }
           });
           console.log('Vanhat poistettu, status:', delRes.status);
-
-          // Tallennetaan uudet erissä
           for (let i = 0; i < events.length; i += 50) {
             const batch = events.slice(i, i + 50);
             const upsRes = await fetch(SUPABASE_URL + '/rest/v1/events', {
