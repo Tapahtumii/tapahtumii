@@ -25,50 +25,133 @@ jobs:
           const today = new Date().toISOString().split('T')[0];
           const eventRe = /<event>([\s\S]*?)<\/event>/g;
           const grouped = new Map();
+          let skipped = 0;
           let m;
+
           while ((m = eventRe.exec(xml)) !== null) {
             const ev = m[1];
             const get = (tag) => { const x = ev.match(new RegExp('<' + tag + '>([\\s\\S]*?)<\\/' + tag + '>')); return x ? x[1].trim() : ''; };
+
             const name = get('name');
             const short_name = get('short_name') || name;
             const startdate = get('startdate');
+            const enddate = get('enddate') || '';
+
             if (!name || !startdate) continue;
             const date = startdate.split(' ')[0];
             if (date < today) continue;
-            const t = name.toLowerCase();
-            let cat = 'Kulttuuri', sub = 'Kulttuuri';
-            if (/rock|punk|metal|jazz|blues|folk|pop|rap|konsertti|keikka|musiik|klubi|elektro|techno/.test(t)) { cat = 'Musiikki'; sub = 'Musiikki'; }
-            else if (/jääkiekko|sm-liiga|jalkapallo|urheilu|ottelu|koripallo|nyrkkeily/.test(t)) { cat = 'Urheilu'; sub = 'Urheilu'; }
-            else if (/lapset|perhe|kids/.test(t)) { cat = 'Lapset'; sub = 'Lapset'; }
-            else if (/teatteri|komedia|stand.?up|tanssi|ooppera/.test(t)) { cat = 'Kulttuuri'; sub = 'Kulttuuri'; }
+
+            // Suodatetaan pois ei-toivotut tapahtumat
+            const nameLower = name.toLowerCase();
+            if (/kausikortti|kausiliput|season.?pass|season.?ticket/.test(nameLower)) { skipped++; continue; }
+            if (/vip.?(lippu|paketti|lounge|alue|ticket)|lippu.*vip/.test(nameLower)) { skipped++; continue; }
+            if (/lahjakortti|gift.?card|gift.?voucher/.test(nameLower)) { skipped++; continue; }
+            if (/juomatarjoilu|juomapaketti|drink.?package|juomakupong/.test(nameLower)) { skipped++; continue; }
+            if (/parkki|pysäköinti|parking/.test(nameLower)) { skipped++; continue; }
+
+            // Suodatetaan tapahtumat joilla on yli 2 vuoden voimassaolo (kausikortit)
+            if (enddate) {
+              const start = new Date(date);
+              const end = new Date(enddate.split(' ')[0]);
+              const diffDays = (end - start) / (1000 * 60 * 60 * 24);
+              if (diffDays > 400) { skipped++; continue; }
+            }
+
+            // Parannettu kategoria-tunnistus
+            const t = nameLower + ' ' + get('location_name').toLowerCase();
+            let category = 'Kulttuuri', subcategory = 'Kulttuuri';
+
+            if (/jääkiekko|sm.?liiga|mestis|liiga.?ottelu|kiekko|hifk|tappara|kärpät|lukko|ilves|kalpa|pelicans|jyp|sport\b|saipa|ässät/.test(t)) {
+              category = 'Urheilu'; subcategory = 'Jääkiekko';
+            } else if (/jalkapallo|veikkausliiga|hjk|ottelu.*jalka|futis/.test(t)) {
+              category = 'Urheilu'; subcategory = 'Jalkapallo';
+            } else if (/koripallo|basket|koris/.test(t)) {
+              category = 'Urheilu'; subcategory = 'Koripallo';
+            } else if (/nyrkkeily|boxing|nyrkkeil/.test(t)) {
+              category = 'Urheilu'; subcategory = 'Nyrkkeily';
+            } else if (/urheilu|ottelu|turnaus|kilpailu|maraton|juoksu/.test(t)) {
+              category = 'Urheilu'; subcategory = 'Urheilu';
+            } else if (/rock|punk|metal|heavy/.test(t)) {
+              category = 'Musiikki'; subcategory = 'Rock';
+            } else if (/jazz/.test(t)) {
+              category = 'Musiikki'; subcategory = 'Jazz';
+            } else if (/klassi|sinfoni|orkesteri|filharmoon/.test(t)) {
+              category = 'Musiikki'; subcategory = 'Klassinen';
+            } else if (/rap\b|hip.?hop/.test(t)) {
+              category = 'Musiikki'; subcategory = 'Rap';
+            } else if (/elektro|techno|dj\b|klubbi/.test(t)) {
+              category = 'Musiikki'; subcategory = 'Elektroninen';
+            } else if (/blues/.test(t)) {
+              category = 'Musiikki'; subcategory = 'Blues';
+            } else if (/folk|kansanmusiik/.test(t)) {
+              category = 'Musiikki'; subcategory = 'Folk';
+            } else if (/pop\b|iskelmä|schlager/.test(t)) {
+              category = 'Musiikki'; subcategory = 'Pop';
+            } else if (/konsertti|keikka|musiik|bändi|kuoro|yhtye|artisti|esiintyj/.test(t)) {
+              category = 'Musiikki'; subcategory = 'Musiikki';
+            } else if (/stand.?up|komedia|huumori/.test(t)) {
+              category = 'Kulttuuri'; subcategory = 'Komedia';
+            } else if (/teatteri|näytelmä|musikaali/.test(t)) {
+              category = 'Kulttuuri'; subcategory = 'Teatteri';
+            } else if (/ooppera|opera/.test(t)) {
+              category = 'Kulttuuri'; subcategory = 'Ooppera';
+            } else if (/tanssi|baletti/.test(t)) {
+              category = 'Kulttuuri'; subcategory = 'Tanssi';
+            } else if (/sirkus/.test(t)) {
+              category = 'Kulttuuri'; subcategory = 'Sirkus';
+            } else if (/näyttely|galleria|museo/.test(t)) {
+              category = 'Kulttuuri'; subcategory = 'Näyttely';
+            } else if (/lapset|perhe|family|kids|lasten/.test(t)) {
+              category = 'Lapset'; subcategory = 'Lapset';
+            } else {
+              category = 'Kulttuuri'; subcategory = 'Kulttuuri';
+            }
+
+            const city = get('location_city') || 'Helsinki';
+            const venue = get('location_name') || '';
+            const ticket_url = get('ticket_affiliate_url') || '';
+            const price = get('priceinfo') || '';
+            const time = startdate.includes(' ') ? startdate.split(' ')[1].slice(0,5) : null;
+
             const key = short_name.substring(0, 60) + '_' + date;
-            if (!grouped.has(key)) grouped.set(key, {
-              title: short_name.substring(0, 255),
-              description: 'Tiketti: ' + short_name,
-              city: (get('location_city') || 'Helsinki').substring(0, 100),
-              venue: get('location_name').substring(0, 255),
-              address: '', category: cat, subcategory: sub,
-              start_date: date,
-              start_time: startdate.includes(' ') ? startdate.split(' ')[1].slice(0,5) : null,
-              end_date: null, end_time: null,
-              price: get('priceinfo').substring(0, 100),
-              ticket_url: get('ticket_affiliate_url').substring(0, 500),
-              event_url: get('ticket_affiliate_url').substring(0, 500),
-              image_url: '',
-              source: 'tiketti',
-              source_id: ('tiketti-' + key.replace(/[^a-z0-9]/gi, '-')).substring(0, 100),
-              status: 'auto_approved',
-            });
+            if (!grouped.has(key)) {
+              grouped.set(key, {
+                title: short_name.substring(0, 255),
+                description: 'Tiketti: ' + short_name,
+                city: city.substring(0, 100),
+                venue: venue.substring(0, 255),
+                address: '', category, subcategory,
+                start_date: date, start_time: time,
+                end_date: null, end_time: null,
+                price: price.substring(0, 100),
+                ticket_url: ticket_url.substring(0, 500),
+                event_url: ticket_url.substring(0, 500),
+                image_url: '',
+                source: 'tiketti',
+                source_id: ('tiketti-' + key.replace(/[^a-z0-9]/gi, '-')).substring(0, 100),
+                status: 'auto_approved',
+              });
+            }
           }
+
           const events = [...grouped.values()];
-          console.log('Tapahtumia:', events.length);
+          console.log('Tapahtumia:', events.length, '| Suodatettu pois:', skipped);
           if (events.length === 0) process.exit(0);
 
           const URL = process.env.SUPABASE_URL;
           const KEY = process.env.SUPABASE_SERVICE_KEY;
-          await fetch(URL + '/rest/v1/events?source=eq.tiketti', { method: 'DELETE', headers: { apikey: KEY, Authorization: 'Bearer ' + KEY } });
+
+          await fetch(URL + '/rest/v1/events?source=eq.tiketti', {
+            method: 'DELETE',
+            headers: { apikey: KEY, Authorization: 'Bearer ' + KEY }
+          });
+
           for (let i = 0; i < events.length; i += 50) {
-            const r = await fetch(URL + '/rest/v1/events', { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify(events.slice(i, i+50)) });
+            const r = await fetch(URL + '/rest/v1/events', {
+              method: 'POST',
+              headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' },
+              body: JSON.stringify(events.slice(i, i+50))
+            });
             console.log('Era', Math.floor(i/50)+1, r.ok ? 'ok' : await r.text());
           }
           console.log('Valmis:', events.length, 'tapahtumaa');
