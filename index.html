@@ -2120,16 +2120,24 @@ const Bubble = React.memo(({
   const sizeVar = numId % 4;
   const baseSize = 85 + sizeVar * 18;
 
-  // Satunnainen vaaka-asema
-  // Kupla sijainti: painotetaan keskialuetta, leviää tasaisesti molempiin suuntiin
-  const _raw = (numId * 31 + numId * 11 + numId * 67) % 100;
-  const _normalized = Math.sin((_raw / 100) * Math.PI); // huippu keskellä
-  const _jitter = ((numId * 17 + numId * 53) % 21) - 10; // -10..+10 satunnaisuus
+  // Vaaka-asema
   const isMob = typeof window !== 'undefined' && window.innerWidth < 768;
-  const _maxLeft = isMob ? 72 : 72; // sama leveys mobiilissa ja desktopissa
-  // Mobiilissa käytetään enemmän satunnaisuutta jotta kuplat eivät jononnu
-  const _mobileExtra = isMob ? ((numId * 43 + numId * 29) % 30) - 15 : 0;
-  const randomLeft = Math.max(isMob ? 5 : 8, Math.min(_maxLeft, 15 + Math.round(_normalized * 55) + _jitter + _mobileExtra));
+  let randomLeft;
+  if (isMob) {
+    // Mobiilissa: vuorottelu vasemmalle/oikealle + pieni jitter
+    // Käytetään indeksiä (animDelay ~= järjestysnumero) vuorotteluun
+    const idx = Math.round(animDelay * 10); // animDelay on yleensä 0.0, 0.1, 0.2...
+    const isLeft = idx % 2 === 0;
+    const base = isLeft ? 8 : 45; // vasen puoli 8-38%, oikea puoli 45-72%
+    const jitter = ((numId * 37 + idx * 13) % 25); // 0-25% lisäsatunnaisuus
+    randomLeft = Math.max(5, Math.min(70, base + jitter));
+  } else {
+    // Desktop: alkuperäinen logiikka
+    const _raw = (numId * 31 + numId * 11 + numId * 67) % 100;
+    const _normalized = Math.sin((_raw / 100) * Math.PI);
+    const _jitter = ((numId * 17 + numId * 53) % 21) - 10;
+    randomLeft = Math.max(8, Math.min(72, 15 + Math.round(_normalized * 55) + _jitter));
+  }
 
   // Cap animation delay to avoid excessive stagger
   const cappedDelay = Math.min(animDelay, 15);
