@@ -70,6 +70,10 @@ jobs:
             if (/stand.?up|standup/.test(t)) {
               category = 'Kulttuuri'; subcategory = 'Komedia';
 
+            // Messut, conventionit, tattoo — ennen keikkapaikkalogiikkaa
+            } else if (/\bmessu\b|tattoo|tatuointi|\bexpo\b|\bconvention\b|\bcomic.?con\b|\bink\b.*messu|messu.*\bink\b/.test(t)) {
+              category = 'Kulttuuri'; subcategory = 'Kulttuuri';
+
             // Mentalismi ja taikuus — ennen keikkapaikkalogiikkaa
             } else if (/mentalisti|taikuri|taikuus|illusionisti/.test(t)) {
               category = 'Kulttuuri'; subcategory = 'Kulttuuri';
