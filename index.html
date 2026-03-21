@@ -3839,7 +3839,9 @@ const Tahtumii = () => {
     if (sb) sb.auth.signOut();
   };
   const cities = ['Helsinki', 'Tampere'];
-  const categories = ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'];
+  const categories = selectedCity === 'Tampere'
+    ? ['Kaikki', 'Musiikki', 'Urheilu']
+    : ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'];
   const getTodayString = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -4448,6 +4450,10 @@ const Tahtumii = () => {
     onClick: e => {
       e.preventDefault();
       setSelectedCity(city);
+      // Jos ollaan Kulttuuri tai Lapset -tabilla ja vaihdetaan Tampereeseen, reset Kaikki
+      if (city === 'Tampere' && (selectedCategory === 'Kulttuuri' || selectedCategory === 'Lapset')) {
+        setSelectedCategory('Kaikki');
+      }
       scrollToCenter(cityScrollRef, idx);
       setExpandedEvent(null);
     },
