@@ -2126,8 +2126,10 @@ const Bubble = React.memo(({
   const _normalized = Math.sin((_raw / 100) * Math.PI); // huippu keskellä
   const _jitter = ((numId * 17 + numId * 53) % 21) - 10; // -10..+10 satunnaisuus
   const isMob = typeof window !== 'undefined' && window.innerWidth < 768;
-  const _maxLeft = isMob ? 58 : 72; // mobiilissa rajataan kauas kalenteripalkista
-  const randomLeft = Math.max(8, Math.min(_maxLeft, 15 + Math.round(_normalized * 50) + _jitter));
+  const _maxLeft = isMob ? 72 : 72; // sama leveys mobiilissa ja desktopissa
+  // Mobiilissa käytetään enemmän satunnaisuutta jotta kuplat eivät jononnu
+  const _mobileExtra = isMob ? ((numId * 43 + numId * 29) % 30) - 15 : 0;
+  const randomLeft = Math.max(isMob ? 5 : 8, Math.min(_maxLeft, 15 + Math.round(_normalized * 55) + _jitter + _mobileExtra));
 
   // Cap animation delay to avoid excessive stagger
   const cappedDelay = Math.min(animDelay, 15);
@@ -2448,7 +2450,9 @@ const Bubble = React.memo(({
       wordBreak: 'break-word',
       textShadow: '0 1px 3px rgba(0,0,0,0.3)'
     }
-  }, event.title.length > 28 ? event.title.substring(0, 28) + '…' : event.title), /*#__PURE__*/React.createElement("div", {
+  }, event.title.length > 28 ? event.title.substring(0, 28) + '…' : event.title), event.dayLabel && /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: '0.55rem', fontWeight: 700, opacity: 0.85, marginTop: '2px', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)' }
+  }, event.dayLabel), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: '0.6rem',
       opacity: 0.7,
@@ -3801,6 +3805,21 @@ const Tahtumii = () => {
           source: e.source,
           source_id: e.source_id
         }));
+
+        // Day 1 / Day 2 -merkinnät saman nimisille tapahtumille eri päivinä
+        const titleCityCount = {};
+        mapped.forEach(e => {
+          const key = (e.title || '').toLowerCase().replace(/\s+/g,'') + '|' + (e.city||'');
+          if (!titleCityCount[key]) titleCityCount[key] = [];
+          titleCityCount[key].push(e);
+        });
+        Object.values(titleCityCount).forEach(group => {
+          if (group.length > 1) {
+            // Järjestä päivämäärän mukaan
+            group.sort((a, b) => a.date.localeCompare(b.date));
+            group.forEach((e, i) => { e.dayLabel = `Day ${i + 1}`; });
+          }
+        });
         console.log(`[Tapahtumii] ${mapped.length} live-tapahtumaa`);
         finishLoading(mapped, 'live');
       } else {
