@@ -24,6 +24,8 @@ jobs:
           if (!res.ok) { console.error('Tiketti status:', res.status); process.exit(1); }
           const xml = await res.text();
           console.log('Feed haettu, koko:', xml.length, 'merkkiä');
+          console.log('Feed alku:', xml.substring(0, 500));
+          console.log('Feed loppu:', xml.substring(xml.length - 500));
 
           const today = new Date().toISOString().split('T')[0];
           const itemRe = /<item>([\s\S]*?)<\/item>/g;
