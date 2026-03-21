@@ -28,6 +28,9 @@ jobs:
           let skipped = 0;
           let m;
 
+          // Tunnettuja keikkapaikkoja - jos nimi tai paikka sisältää näitä, on keikka
+          const KEIKKAPAIKAT = /tavastia|semifinal|g.?livelab|korjaamo|ääniwalli|aaniwalli|nosturi|tavara.?asema|on.?the.?rocks|kulttuuritalo|logomo|telakka|turun.?konserttitalo|pakkahuone|klubi.?tampere|ratinan.?stadion|olympiastadion|hartwall/i;
+
           while ((m = eventRe.exec(xml)) !== null) {
             const ev = m[1];
             const get = (tag) => { const x = ev.match(new RegExp('<' + tag + '>([\\s\\S]*?)<\\/' + tag + '>')); return x ? x[1].trim() : ''; };
@@ -36,46 +39,62 @@ jobs:
             const short_name = get('short_name') || name;
             const startdate = get('startdate');
             const enddate = get('enddate') || '';
+            const location = get('location_name').toLowerCase();
 
             if (!name || !startdate) continue;
             const date = startdate.split(' ')[0];
             if (date < today) continue;
 
-            // Suodatetaan pois ei-toivotut tapahtumat
+            // Suodatetaan pois ei-toivotut
             const nameLower = name.toLowerCase();
             if (/kausikortti|kausiliput|season.?pass|season.?ticket/.test(nameLower)) { skipped++; continue; }
-            if (/vip.?(lippu|paketti|lounge|alue|ticket)|lippu.*vip/.test(nameLower)) { skipped++; continue; }
+            if (/\bvip\b.*(lippu|paketti|lounge|alue|ticket|lisä)|lippu.*\bvip\b/.test(nameLower)) { skipped++; continue; }
             if (/lahjakortti|gift.?card|gift.?voucher/.test(nameLower)) { skipped++; continue; }
             if (/juomatarjoilu|juomapaketti|drink.?package|juomakupong/.test(nameLower)) { skipped++; continue; }
             if (/parkki|pysäköinti|parking/.test(nameLower)) { skipped++; continue; }
+            if (/yrityskummi|yritys.*paketti|yritys.*lippu|corporate/.test(nameLower)) { skipped++; continue; }
+            if (/lisävaruste|merchandise|fanituote/.test(nameLower)) { skipped++; continue; }
 
-            // Suodatetaan tapahtumat joilla on yli 2 vuoden voimassaolo (kausikortit)
+            // Suodatetaan pois yli 400 päivän tapahtumat (kausikortit)
             if (enddate) {
-              const start = new Date(date);
-              const end = new Date(enddate.split(' ')[0]);
-              const diffDays = (end - start) / (1000 * 60 * 60 * 24);
+              const diffDays = (new Date(enddate.split(' ')[0]) - new Date(date)) / (1000 * 60 * 60 * 24);
               if (diffDays > 400) { skipped++; continue; }
             }
 
-            // Parannettu kategoria-tunnistus
-            const t = nameLower + ' ' + get('location_name').toLowerCase();
+            // Kategoriointi
+            const t = nameLower + ' ' + location;
             let category = 'Kulttuuri', subcategory = 'Kulttuuri';
 
-            if (/jääkiekko|sm.?liiga|mestis|liiga.?ottelu|kiekko|hifk|tappara|kärpät|lukko|ilves|kalpa|pelicans|jyp|sport\b|saipa|ässät/.test(t)) {
+            // Urheilu ensin
+            if (/jääkiekko|sm.?liiga|mestis|kiekko-ottelu|hifk|tappara|kärpät|lukko|ilves|kalpa|pelicans|jyp|sport\b|saipa|ässät/.test(t)) {
               category = 'Urheilu'; subcategory = 'Jääkiekko';
-            } else if (/jalkapallo|veikkausliiga|hjk|ottelu.*jalka|futis/.test(t)) {
+            } else if (/jalkapallo|veikkausliiga|hjk|futis/.test(t)) {
               category = 'Urheilu'; subcategory = 'Jalkapallo';
-            } else if (/koripallo|basket|koris/.test(t)) {
+            } else if (/koripallo|basket|koris|seagulls|pyrintö|vilpas|kataja.?basket|bisons|tapiolan.?honka|kouvot|kobrat|karhu.?basket/.test(t)) {
               category = 'Urheilu'; subcategory = 'Koripallo';
-            } else if (/nyrkkeily|boxing|nyrkkeil/.test(t)) {
+            } else if (/nyrkkeily|boxing/.test(t)) {
               category = 'Urheilu'; subcategory = 'Nyrkkeily';
-            } else if (/urheilu|ottelu|turnaus|kilpailu|maraton|juoksu/.test(t)) {
+            } else if (/urheilu|ottelu|turnaus|kilpailu|maraton|juoksu\b/.test(t) && !/teatteri|konsertti/.test(t)) {
               category = 'Urheilu'; subcategory = 'Urheilu';
-            } else if (/rock|punk|metal|heavy/.test(t)) {
+            // Musiikki - keikkapaikat automaattisesti Musiikkiin
+            } else if (KEIKKAPAIKAT.test(location) || KEIKKAPAIKAT.test(nameLower)) {
+              category = 'Musiikki'; subcategory = 'Musiikki';
+              // Tarkempi alagenre
+              if (/rock|punk/.test(t)) subcategory = 'Rock';
+              else if (/metal|heavy/.test(t)) subcategory = 'Heavy';
+              else if (/jazz/.test(t)) subcategory = 'Jazz';
+              else if (/klassi|sinfoni|orkesteri/.test(t)) subcategory = 'Klassinen';
+              else if (/rap\b|hip.?hop/.test(t)) subcategory = 'Rap';
+              else if (/elektro|techno|dj\b/.test(t)) subcategory = 'Elektroninen';
+              else if (/blues/.test(t)) subcategory = 'Blues';
+              else if (/folk|kansanmusiik/.test(t)) subcategory = 'Folk';
+            } else if (/rock|punk/.test(t)) {
               category = 'Musiikki'; subcategory = 'Rock';
+            } else if (/metal|heavy/.test(t)) {
+              category = 'Musiikki'; subcategory = 'Heavy';
             } else if (/jazz/.test(t)) {
               category = 'Musiikki'; subcategory = 'Jazz';
-            } else if (/klassi|sinfoni|orkesteri|filharmoon/.test(t)) {
+            } else if (/klassi|sinfoni|orkesteri|filharmon/.test(t)) {
               category = 'Musiikki'; subcategory = 'Klassinen';
             } else if (/rap\b|hip.?hop/.test(t)) {
               category = 'Musiikki'; subcategory = 'Rap';
@@ -87,8 +106,9 @@ jobs:
               category = 'Musiikki'; subcategory = 'Folk';
             } else if (/pop\b|iskelmä|schlager/.test(t)) {
               category = 'Musiikki'; subcategory = 'Pop';
-            } else if (/konsertti|keikka|musiik|bändi|kuoro|yhtye|artisti|esiintyj/.test(t)) {
+            } else if (/konsertti|keikka|musiik|bändi|kuoro|yhtye|artisti/.test(t)) {
               category = 'Musiikki'; subcategory = 'Musiikki';
+            // Kulttuuri
             } else if (/stand.?up|komedia|huumori/.test(t)) {
               category = 'Kulttuuri'; subcategory = 'Komedia';
             } else if (/teatteri|näytelmä|musikaali/.test(t)) {
@@ -103,29 +123,22 @@ jobs:
               category = 'Kulttuuri'; subcategory = 'Näyttely';
             } else if (/lapset|perhe|family|kids|lasten/.test(t)) {
               category = 'Lapset'; subcategory = 'Lapset';
-            } else {
-              category = 'Kulttuuri'; subcategory = 'Kulttuuri';
             }
-
-            const city = get('location_city') || 'Helsinki';
-            const venue = get('location_name') || '';
-            const ticket_url = get('ticket_affiliate_url') || '';
-            const price = get('priceinfo') || '';
-            const time = startdate.includes(' ') ? startdate.split(' ')[1].slice(0,5) : null;
 
             const key = short_name.substring(0, 60) + '_' + date;
             if (!grouped.has(key)) {
               grouped.set(key, {
                 title: short_name.substring(0, 255),
                 description: 'Tiketti: ' + short_name,
-                city: city.substring(0, 100),
-                venue: venue.substring(0, 255),
+                city: (get('location_city') || 'Helsinki').substring(0, 100),
+                venue: get('location_name').substring(0, 255),
                 address: '', category, subcategory,
-                start_date: date, start_time: time,
+                start_date: date,
+                start_time: startdate.includes(' ') ? startdate.split(' ')[1].slice(0,5) : null,
                 end_date: null, end_time: null,
-                price: price.substring(0, 100),
-                ticket_url: ticket_url.substring(0, 500),
-                event_url: ticket_url.substring(0, 500),
+                price: get('priceinfo').substring(0, 100),
+                ticket_url: get('ticket_affiliate_url').substring(0, 500),
+                event_url: get('ticket_affiliate_url').substring(0, 500),
                 image_url: '',
                 source: 'tiketti',
                 source_id: ('tiketti-' + key.replace(/[^a-z0-9]/gi, '-')).substring(0, 100),
