@@ -1,92 +1,76 @@
-const res = await fetch('https://www.tiketti.fi/feed/429843696', {
-  headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    'Accept': 'application/xml, text/xml',
-  }
-});
-if (!res.ok) { console.error('Tiketti status:', res.status); process.exit(1); }
-const xml = await res.text();
-console.log('Feed haettu, koko:', xml.length);
+name: Fetch Tiketti Events
 
-const today = new Date().toISOString().split('T')[0];
-const itemRe = /<event>([\s\S]*?)<\/event>/g;
-const grouped = new Map();
-let m;
-while ((m = itemRe.exec(xml)) !== null) {
-  const item = m[1];
-  const get = (tag) => {
-    const x = item.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`));
-    return x ? x[1].trim() : '';
-  };
-  const name = get('name');
-  const short_name = get('short_name') || name;
-  const startdate = get('startdate');
-  if (!name || !startdate) continue;
-  const date = startdate.split(' ')[0];
-  if (date < today) continue;
+on:
+  schedule:
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
 
-  // Kategoria title-tekstin perusteella
-  const t = (name + ' ' + get('location_name')).toLowerCase();
-  let category = 'Kulttuuri', subcategory = 'Kulttuuri';
-  if (/rock|punk|metal|heavy|jazz|blues|folk|pop|rap|hiphop|konsertti|keikka|musiik|bändi|klubi|elektro|techno/.test(t)) { category = 'Musiikki'; subcategory = 'Musiikki'; }
-  else if (/jääkiekko|sm-liiga|mestis|jalkapallo|urheilu|ottelu|koripallo|nyrkkeily/.test(t)) { category = 'Urheilu'; subcategory = 'Urheilu'; }
-  else if (/lapset|perhe|family|kids/.test(t)) { category = 'Lapset'; subcategory = 'Lapset'; }
-  else if (/teatteri|näytelmä|ooppera|komedia|stand.?up|tanssi|sirkus/.test(t)) { category = 'Kulttuuri'; subcategory = 'Kulttuuri'; }
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Tiketti and save to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          cat > /tmp/tiketti.mjs << 'JSEOF'
+          const res = await fetch('https://www.tiketti.fi/feed/429843696', {
+            headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/xml' }
+          });
+          if (!res.ok) { console.error('status:', res.status); process.exit(1); }
+          const xml = await res.text();
+          console.log('Koko:', xml.length);
 
-  const city = get('location_city') || 'Helsinki';
-  const venue = get('location_name') || '';
-  const ticket_url = get('ticket_affiliate_url') || '';
-  const price = get('priceinfo') || '';
-  const time = startdate.includes(' ') ? startdate.split(' ')[1]?.slice(0, 5) : null;
+          const today = new Date().toISOString().split('T')[0];
+          const eventRe = /<event>([\s\S]*?)<\/event>/g;
+          const grouped = new Map();
+          let m;
+          while ((m = eventRe.exec(xml)) !== null) {
+            const ev = m[1];
+            const get = (tag) => { const x = ev.match(new RegExp('<' + tag + '>([\\s\\S]*?)<\\/' + tag + '>')); return x ? x[1].trim() : ''; };
+            const name = get('name');
+            const short_name = get('short_name') || name;
+            const startdate = get('startdate');
+            if (!name || !startdate) continue;
+            const date = startdate.split(' ')[0];
+            if (date < today) continue;
+            const t = name.toLowerCase();
+            let cat = 'Kulttuuri', sub = 'Kulttuuri';
+            if (/rock|punk|metal|jazz|blues|folk|pop|rap|konsertti|keikka|musiik|klubi|elektro|techno/.test(t)) { cat = 'Musiikki'; sub = 'Musiikki'; }
+            else if (/jääkiekko|sm-liiga|jalkapallo|urheilu|ottelu|koripallo|nyrkkeily/.test(t)) { cat = 'Urheilu'; sub = 'Urheilu'; }
+            else if (/lapset|perhe|kids/.test(t)) { cat = 'Lapset'; sub = 'Lapset'; }
+            else if (/teatteri|komedia|stand.?up|tanssi|ooppera/.test(t)) { cat = 'Kulttuuri'; sub = 'Kulttuuri'; }
+            const key = short_name.substring(0, 60) + '_' + date;
+            if (!grouped.has(key)) grouped.set(key, {
+              title: short_name.substring(0, 255),
+              description: 'Tiketti: ' + short_name,
+              city: (get('location_city') || 'Helsinki').substring(0, 100),
+              venue: get('location_name').substring(0, 255),
+              address: '', category: cat, subcategory: sub,
+              start_date: date,
+              start_time: startdate.includes(' ') ? startdate.split(' ')[1].slice(0,5) : null,
+              end_date: null, end_time: null,
+              price: get('priceinfo').substring(0, 100),
+              ticket_url: get('ticket_affiliate_url').substring(0, 500),
+              event_url: get('ticket_affiliate_url').substring(0, 500),
+              image_url: '',
+              source: 'tiketti',
+              source_id: ('tiketti-' + key.replace(/[^a-z0-9]/gi, '-')).substring(0, 100),
+              status: 'auto_approved',
+            });
+          }
+          const events = [...grouped.values()];
+          console.log('Tapahtumia:', events.length);
+          if (events.length === 0) process.exit(0);
 
-  const key = short_name.substring(0, 60) + '_' + date;
-  if (!grouped.has(key)) {
-    grouped.set(key, {
-      title: short_name.substring(0, 255),
-      description: 'Tiketti: ' + short_name,
-      city: city.substring(0, 100),
-      venue: venue.substring(0, 255),
-      address: '',
-      category, subcategory,
-      start_date: date,
-      start_time: time,
-      end_date: null, end_time: null,
-      price: price.substring(0, 100),
-      ticket_url: ticket_url.substring(0, 500),
-      event_url: ticket_url.substring(0, 500),
-      image_url: '',
-      source: 'tiketti',
-      source_id: 'tiketti-' + key.replace(/[^a-z0-9]/gi, '-').substring(0, 80),
-      status: 'auto_approved',
-    });
-  }
-}
-const events = [...grouped.values()];
-console.log('Tapahtumia:', events.length);
-if (events.length === 0) { console.log('Ei tapahtumia'); process.exit(0); }
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-
-await fetch(SUPABASE_URL + '/rest/v1/events?source=eq.tiketti', {
-  method: 'DELETE',
-  headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + SUPABASE_SERVICE_KEY }
-});
-console.log('Vanhat poistettu');
-
-for (let i = 0; i < events.length; i += 50) {
-  const batch = events.slice(i, i + 50);
-  const upsRes = await fetch(SUPABASE_URL + '/rest/v1/events', {
-    method: 'POST',
-    headers: {
-      'apikey': SUPABASE_SERVICE_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_SERVICE_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates',
-    },
-    body: JSON.stringify(batch),
-  });
-  if (!upsRes.ok) console.error('Upsert virhe:', await upsRes.text());
-  else console.log('Erä', Math.floor(i/50)+1, 'tallennettu');
-}
-console.log('Valmis! Tallennettu:', events.length, 'tapahtumaa');
+          const URL = process.env.SUPABASE_URL;
+          const KEY = process.env.SUPABASE_SERVICE_KEY;
+          await fetch(URL + '/rest/v1/events?source=eq.tiketti', { method: 'DELETE', headers: { apikey: KEY, Authorization: 'Bearer ' + KEY } });
+          for (let i = 0; i < events.length; i += 50) {
+            const r = await fetch(URL + '/rest/v1/events', { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify(events.slice(i, i+50)) });
+            console.log('Era', Math.floor(i/50)+1, r.ok ? 'ok' : await r.text());
+          }
+          console.log('Valmis:', events.length, 'tapahtumaa');
+          JSEOF
+          node --input-type=module < /tmp/tiketti.mjs
