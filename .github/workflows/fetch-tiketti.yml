@@ -71,7 +71,7 @@ jobs:
               category = 'Kulttuuri'; subcategory = 'Komedia';
 
             // Messut, conventionit, tattoo — ennen keikkapaikkalogiikkaa
-            } else if (/\bmessu\b|tattoo|tatuointi|\bexpo\b|\bconvention\b|\bcomic.?con\b|\bink\b.*messu|messu.*\bink\b/.test(t)) {
+            } else if (/\bmessu\b|tattoo|tatuointi|\bexpo\b|\bconvention\b|\bcomic.?con\b|helsinki.?ink|\bink\b.*(festival|show|event|20[0-9]{2})/.test(t)) {
               category = 'Kulttuuri'; subcategory = 'Kulttuuri';
 
             // Mentalismi ja taikuus — ennen keikkapaikkalogiikkaa
