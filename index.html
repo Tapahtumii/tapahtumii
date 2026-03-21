@@ -11,17 +11,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tapahtumat">
-    <title>Tapahtumat Helsinki & Tampere — keikat, urheilu, jääkiekko | Tapahtumii</title>
-    <meta name="description" content="Löydä tapahtumat Helsingissä ja Tampereella. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja lastentapahtumat — kaikki yhdessä paikassa. Tapahtumii.com" />
-    <meta name="keywords" content="tapahtumat helsinki, tapahtumat tampere, keikat helsinki, keikat tampere, jääkiekko helsinki, jääkiekko tampere, konsertit, SM-liiga, Mestis, musiikki, urheilu, lastentapahtumat, Tavastia, G Livelab, Tavara-asema" />
-    <meta property="og:title" content="Tapahtumat Helsinki & Tampere — keikat, urheilu, jääkiekko | Tapahtumii" />
-    <meta property="og:description" content="Löydä kaikki tapahtumat yhdestä paikasta. Keikat, konsertit, jääkiekko ja urheilu Helsingissä ja Tampereella." />
+    <title>Tapahtumat Suomessa — keikat, urheilu, jääkiekko | Tapahtumii</title>
+    <meta name="description" content="Löydä tapahtumat Helsingissä, Tampereella, Turussa, Oulussa, Jyväskylässä, Kuopiossa ja Rovaniemellä. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja lastentapahtumat — kaikki yhdessä paikassa. Tapahtumii.com" />
+    <meta name="keywords" content="tapahtumat helsinki, tapahtumat tampere, tapahtumat turku, tapahtumat oulu, tapahtumat jyväskylä, tapahtumat kuopio, tapahtumat rovaniemi, keikat, konsertit, jääkiekko, SM-liiga, urheilu, lastentapahtumat" />
+    <meta property="og:title" content="Tapahtumat Suomessa — keikat, urheilu, jääkiekko | Tapahtumii" />
+    <meta property="og:description" content="Löydä kaikki tapahtumat yhdestä paikasta. Keikat, konsertit, jääkiekko ja urheilu ympäri Suomen." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://tapahtumathelsinki.com" />
     <link rel="canonical" href="https://tapahtumathelsinki.com" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Tapahtumat Helsinki & Tampere | Tapahtumii" />
-    <meta name="twitter:description" content="Keikat, konsertit, jääkiekko ja tapahtumat Helsingissä ja Tampereella." />
+    <meta name="twitter:title" content="Tapahtumat Suomessa | Tapahtumii" />
+    <meta name="twitter:description" content="Keikat, konsertit, jääkiekko ja tapahtumat ympäri Suomen." />
     <link rel="alternate" hreflang="fi" href="https://tapahtumii.fi" />
     <script type="application/ld+json">
     {
@@ -3604,7 +3604,7 @@ const Tahtumii = () => {
 
   // Päivitä sivun otsikko kaupungin mukaan
   useEffect(() => {
-    const cityName = selectedCity === 'Tampere' ? 'Tampere' : 'Helsinki';
+    const cityName = selectedCity;
     document.title = `Tapahtumat ${cityName} — keikat, konsertit, urheilu | Tapahtumii`;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) metaDesc.setAttribute('content', `Löydä tapahtumat ${cityName === 'Helsinki' ? 'Helsingissä' : 'Tampereella'}. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja lastentapahtumat — kaikki yhdessä paikassa.`);
@@ -3814,83 +3814,14 @@ const Tahtumii = () => {
   useEffect(() => {
     refreshDbEvents();
   }, []);
-
-  // Haetaan Tiketti-tapahtumat frontendistä corsproxy kautta
-  useEffect(() => {
-    if (!sb) return;
-    const fetchAndSaveTiketti = async () => {
-      try {
-        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://www.tiketti.fi/feed/429843696');
-        const res = await fetch(proxyUrl);
-        if (!res.ok) { console.warn('[Tiketti] proxy status', res.status); return; }
-        const xml = await res.text();
-        const today = new Date().toISOString().split('T')[0];
-        const itemRe = /<item>([\s\S]*?)<\/item>/g;
-        const grouped = new Map();
-        let m;
-        while ((m = itemRe.exec(xml)) !== null) {
-          const item = m[1];
-          const get = (tag) => {
-            const x = item.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`));
-            return x ? (x[1] || x[2] || '').trim() : '';
-          };
-          const title = get('title');
-          const short_name = get('short_name') || title;
-          const startdate = get('startdate') || get('pubDate');
-          if (!title || !startdate) continue;
-          const date = startdate.includes('T') ? startdate.split('T')[0] : startdate.split(' ')[0];
-          if (date < today) continue;
-          const rawCat = get('categories').toLowerCase();
-          let category = 'Kulttuuri', subcategory = 'Kulttuuri';
-          if (rawCat.includes('musiikki')) { category = 'Musiikki'; subcategory = 'Musiikki'; }
-          else if (rawCat.includes('urheilu')) { category = 'Urheilu'; subcategory = 'Urheilu'; }
-          else if (rawCat.includes('lapset') || rawCat.includes('perhe')) { category = 'Lapset'; subcategory = 'Lapset'; }
-          const key = `${short_name.substring(0, 60)}_${date}`;
-          if (!grouped.has(key)) {
-            grouped.set(key, {
-              title: short_name.substring(0, 255),
-              description: `Tiketti: ${short_name}`,
-              city: get('city') || 'Helsinki',
-              venue: get('venue').substring(0, 255),
-              address: '',
-              category, subcategory,
-              start_date: date,
-              start_time: startdate.includes('T') ? startdate.split('T')[1]?.slice(0, 5) : null,
-              end_date: null, end_time: null,
-              price: get('price').substring(0, 100),
-              ticket_url: get('link').substring(0, 500),
-              event_url: get('link').substring(0, 500),
-              image_url: get('image').substring(0, 500),
-              source: 'tiketti',
-              source_id: `tiketti-${key.replace(/[^a-z0-9]/gi, '-').substring(0, 80)}`,
-              status: 'auto_approved',
-            });
-          }
-        }
-        const tikettiEvents = [...grouped.values()];
-        if (tikettiEvents.length === 0) { console.log('[Tiketti] 0 tapahtumaa'); return; }
-        for (let i = 0; i < tikettiEvents.length; i += 50) {
-          const batch = tikettiEvents.slice(i, i + 50);
-          const { error } = await sb.from('events').upsert(batch, { onConflict: 'source,source_id', ignoreDuplicates: false });
-          if (error) console.warn('[Tiketti] upsert virhe:', error.message);
-        }
-        console.log(`[Tiketti] ${tikettiEvents.length} tapahtumaa tallennettu`);
-        refreshDbEvents();
-      } catch (e) {
-        console.warn('[Tiketti] haku epäonnistui: ', e);
-      }
-    };
-    fetchAndSaveTiketti();
-  }, []);
-
   const allEvents = events;
   const handleLogout = () => {
     setUser(null);
     setUserProfile(null);
     if (sb) sb.auth.signOut();
   };
-  const cities = ['Helsinki', 'Tampere'];
-  const categories = ['Kaikki', 'Musiikki', 'Urheilu', 'Lapset'];
+  const cities = ['Helsinki', 'Tampere', 'Turku', 'Oulu', 'Jyväskylä', 'Kuopio', 'Rovaniemi'];
+  const categories = ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'];
   const getTodayString = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -4130,7 +4061,7 @@ const Tahtumii = () => {
       WebkitTextFillColor: 'transparent',
       position: 'relative'
     }
-  }, selectedCity === 'Tampere' ? 'tapahtumat tampere' : 'tapahtumat helsinki')), user && /*#__PURE__*/React.createElement(UserMenu, {
+  }, selectedCity === 'Tampere' ? 'tapahtumat tampere' : selectedCity === 'Turku' ? 'tapahtumat turku' : selectedCity === 'Oulu' ? 'tapahtumat oulu' : selectedCity === 'Jyväskylä' ? 'tapahtumat jyväskylä' : selectedCity === 'Kuopio' ? 'tapahtumat kuopio' : selectedCity === 'Rovaniemi' ? 'tapahtumat rovaniemi' : 'tapahtumat helsinki')), user && /*#__PURE__*/React.createElement(UserMenu, {
     user: user,
     profile: userProfile,
     onLogout: handleLogout,
@@ -4441,7 +4372,7 @@ const Tahtumii = () => {
       boxShadow: selectedCategory === cat ? '0 0 20px rgba(139,92,246,0.4)' : 'none',
       transform: selectedCategory === cat ? 'scale(1.05)' : 'scale(1)'
     }
-  }, cat === 'Musiikki' ? 'Keikat' : cat)), /*#__PURE__*/React.createElement("div", {
+  }, cat === 'Musiikki' ? 'Keikat' : cat === 'Kulttuuri' ? 'Kulttuuri' : cat)), /*#__PURE__*/React.createElement("div", {
     style: {
       flexShrink: 0,
       width: 'calc(50vw - 60px)'
