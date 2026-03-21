@@ -11,17 +11,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tapahtumat">
-    <title>Tapahtumat Suomessa — keikat, urheilu, jääkiekko | Tapahtumii</title>
-    <meta name="description" content="Löydä tapahtumat Helsingissä, Tampereella, Turussa, Oulussa, Jyväskylässä, Kuopiossa ja Rovaniemellä. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja lastentapahtumat — kaikki yhdessä paikassa. Tapahtumii.com" />
-    <meta name="keywords" content="tapahtumat helsinki, tapahtumat tampere, tapahtumat turku, tapahtumat oulu, tapahtumat jyväskylä, tapahtumat kuopio, tapahtumat rovaniemi, keikat, konsertit, jääkiekko, SM-liiga, urheilu, lastentapahtumat" />
-    <meta property="og:title" content="Tapahtumat Suomessa — keikat, urheilu, jääkiekko | Tapahtumii" />
-    <meta property="og:description" content="Löydä kaikki tapahtumat yhdestä paikasta. Keikat, konsertit, jääkiekko ja urheilu ympäri Suomen." />
+    <title>Tapahtumat Helsinki & Tampere — keikat, urheilu, jääkiekko | Tapahtumii</title>
+    <meta name="description" content="Löydä tapahtumat Helsingissä ja Tampereella. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja lastentapahtumat — kaikki yhdessä paikassa. Tapahtumii.com" />
+    <meta name="keywords" content="tapahtumat helsinki, tapahtumat tampere, keikat helsinki, keikat tampere, jääkiekko helsinki, jääkiekko tampere, konsertit, SM-liiga, Mestis, musiikki, urheilu, lastentapahtumat, Tavastia, G Livelab, Tavara-asema" />
+    <meta property="og:title" content="Tapahtumat Helsinki & Tampere — keikat, urheilu, jääkiekko | Tapahtumii" />
+    <meta property="og:description" content="Löydä kaikki tapahtumat yhdestä paikasta. Keikat, konsertit, jääkiekko ja urheilu Helsingissä ja Tampereella." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://tapahtumathelsinki.com" />
     <link rel="canonical" href="https://tapahtumathelsinki.com" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Tapahtumat Suomessa | Tapahtumii" />
-    <meta name="twitter:description" content="Keikat, konsertit, jääkiekko ja tapahtumat ympäri Suomen." />
+    <meta name="twitter:title" content="Tapahtumat Helsinki & Tampere | Tapahtumii" />
+    <meta name="twitter:description" content="Keikat, konsertit, jääkiekko ja tapahtumat Helsingissä ja Tampereella." />
     <link rel="alternate" hreflang="fi" href="https://tapahtumii.fi" />
     <script type="application/ld+json">
     {
@@ -3820,7 +3820,7 @@ const Tahtumii = () => {
     setUserProfile(null);
     if (sb) sb.auth.signOut();
   };
-  const cities = ['Helsinki', 'Tampere', 'Turku', 'Oulu', 'Jyväskylä', 'Kuopio', 'Rovaniemi'];
+  const cities = ['Helsinki', 'Tampere'];
   const categories = ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'];
   const getTodayString = () => {
     const d = new Date();
@@ -4061,7 +4061,7 @@ const Tahtumii = () => {
       WebkitTextFillColor: 'transparent',
       position: 'relative'
     }
-  }, selectedCity === 'Tampere' ? 'tapahtumat tampere' : selectedCity === 'Turku' ? 'tapahtumat turku' : selectedCity === 'Oulu' ? 'tapahtumat oulu' : selectedCity === 'Jyväskylä' ? 'tapahtumat jyväskylä' : selectedCity === 'Kuopio' ? 'tapahtumat kuopio' : selectedCity === 'Rovaniemi' ? 'tapahtumat rovaniemi' : 'tapahtumat helsinki')), user && /*#__PURE__*/React.createElement(UserMenu, {
+  }, selectedCity === 'Tampere' ? 'tapahtumat tampere' : 'tapahtumat helsinki')), user && /*#__PURE__*/React.createElement(UserMenu, {
     user: user,
     profile: userProfile,
     onLogout: handleLogout,
