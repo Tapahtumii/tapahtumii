@@ -29,7 +29,7 @@ jobs:
           let m;
 
           // Tunnettuja keikkapaikkoja - jos nimi tai paikka sisältää näitä, on keikka
-          const KEIKKAPAIKAT = /tavastia|semifinal|g.?livelab|korjaamo|ääniwalli|aaniwalli|nosturi|tavara.?asema|on.?the.?rocks|kulttuuritalo|logomo|telakka|turun.?konserttitalo|pakkahuone|klubi.?tampere|ratinan.?stadion|olympiastadion|hartwall|45.?special|bar.?ihku|rio.?live|riolive|teerenpeli|lutakko|tullikamari|olympia.tampere|z-one|henry.?s.?pub|rytmikorjaamo|klubi\b|semifinali/i;
+          const KEIKKAPAIKAT = /tavastia|semifinal|g.?livelab|korjaamo|ääniwalli|aaniwalli|nosturi|tavara.?asema|on.?the.?rocks|kulttuuritalo|logomo|telakka|turun.?konserttitalo|pakkahuone|klubi.?tampere|ratinan.?stadion|olympiastadion|hartwall|45.?special|bar.?ihku|rio.?live|riolive|teerenpeli|lutakko|tullikamari|olympia.tampere|z-one|henry.?s.?pub|rytmikorjaamo|klubi\b|semifinali|kuudes.?linja|bar.?loose|botta\b|teatteri.?botta|studio51|juhlatila|konserttisali|musiikkitalo|finlandia.?talo|kulttuurisali|kulttuurikeskus|kaapelitehdas|kino.?laika|house.?of.?rock|kerubi\b|pakkahuone/i;
 
           while ((m = eventRe.exec(xml)) !== null) {
             const ev = m[1];
@@ -69,6 +69,10 @@ jobs:
             // Stand up & komedia ENSIN ennen keikkapaikkalogiikkaa
             if (/stand.?up|standup/.test(t)) {
               category = 'Kulttuuri'; subcategory = 'Komedia';
+
+            // Mentalismi ja taikuus — ennen keikkapaikkalogiikkaa
+            } else if (/mentalisti|taikuri|taikuus|illusionisti/.test(t)) {
+              category = 'Kulttuuri'; subcategory = 'Kulttuuri';
 
             // Salibandy F-liiga joukkueet
             } else if (/eräviikingit|nokian.?krp|krp\b|classic\b|westend.?indians|\bindians\b|happee\b|spv\b|ssra\b|oilers\b|cocks\b|dicken\b|salibandy|salibandyliiga|f-liiga/.test(t) && !/ravintola|illallinen/.test(t)) {
