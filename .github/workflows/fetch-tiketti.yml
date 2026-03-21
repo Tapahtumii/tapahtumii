@@ -54,6 +54,7 @@ jobs:
             if (/parkki|pysäköinti|parking/.test(nameLower)) { skipped++; continue; }
             if (/yrityskummi|yritys.*paketti|yritys.*lippu|corporate/.test(nameLower)) { skipped++; continue; }
             if (/lisävaruste|merchandise|fanituote/.test(nameLower)) { skipped++; continue; }
+            if (/illallinen|dinner|aamiainen|lounas|brunssi|viinidinner|ruokailupaketti/.test(nameLower)) { skipped++; continue; }
 
             // Suodatetaan pois yli 400 päivän tapahtumat (kausikortit)
             if (enddate) {
@@ -61,27 +62,50 @@ jobs:
               if (diffDays > 400) { skipped++; continue; }
             }
 
-            // Kategoriointi
+            // Kategoriointi — järjestys on tärkeä: tarkemmat ensin
             const t = nameLower + ' ' + location;
             let category = 'Kulttuuri', subcategory = 'Kulttuuri';
 
-            // Urheilu ensin
-            if (/jääkiekko|sm.?liiga|mestis|kiekko-ottelu|hifk|tappara|kärpät|lukko|ilves|kalpa|pelicans|jyp|sport\b|saipa|ässät/.test(t)) {
+            // Stand up & komedia ENSIN ennen keikkapaikkalogiikkaa
+            if (/stand.?up|standup/.test(t)) {
+              category = 'Kulttuuri'; subcategory = 'Komedia';
+
+            // Salibandy F-liiga joukkueet
+            } else if (/eräviikingit|nokian.?krp|krp\b|classic\b|westend.?indians|\bindians\b|happee\b|spv\b|ssra\b|oilers\b|cocks\b|dicken\b|salibandy|salibandyliiga|f-liiga/.test(t) && !/ravintola|illallinen/.test(t)) {
+              category = 'Urheilu'; subcategory = 'Urheilu';
+
+            // Käsipallo
+            } else if (/käsipallo|puolivälierä|välierä.*käsi|käsi.*finaali/.test(t)) {
+              category = 'Urheilu'; subcategory = 'Urheilu';
+
+            // Jääkiekko SM-liiga + Mestis - kaikki joukkueet
+            } else if (/jääkiekko|sm.?liiga|mestis|hifk|tappara|kärpät|lukko|kalpa|pelicans|jyp\b|saipa|ässät|koovee|tuto.?hockey|roki\b|ketterä\b|ipk\b|jokp\b|keupa\b|kiekko.?vantaa|hermes\b|nokian.?pyry|kiekko.?espoo|hpk\b|kookoo\b|jukurit\b/.test(t) && !/ravintola|illallinen|dinner/.test(t)) {
               category = 'Urheilu'; subcategory = 'Jääkiekko';
+            } else if (/\bilves\b/.test(t) && /ottelu|vs\.|hockey|kiekko/.test(t) && !/ravintola|illallinen/.test(t)) {
+              category = 'Urheilu'; subcategory = 'Jääkiekko';
+            } else if (/\bsport\b/.test(t) && /ottelu|vs\.|kiekko|liiga/.test(t)) {
+              category = 'Urheilu'; subcategory = 'Jääkiekko';
+              category = 'Urheilu'; subcategory = 'Jääkiekko';
+
+            // Jalkapallo
             } else if (/jalkapallo|veikkausliiga|hjk|futis/.test(t)) {
               category = 'Urheilu'; subcategory = 'Jalkapallo';
-            } else if (/koripallo|basket\b|koris\b|helsinki.?seagulls|tampereen.?pyrintö|salon.?vilpas|kataja.?basket|bisons.?loimaa|tapiolan.?honka|kouvot|kobrat|karhu.?basket|bc.?nokia/.test(t)) {
+
+            // Koripallo Korisliiga - kaikki joukkueet
+            } else if (/koripallo|\bbasket\b|\bkoris\b|helsinki seagulls|tampereen pyrintö|salon vilpas|kataja basket|bisons loimaa|tapiolan honka|korihait|\bkouvot\b|\bkobrat\b|karhu basket|bc nokia|kobra.?basket|lahti basketball/.test(t)) {
               category = 'Urheilu'; subcategory = 'Koripallo';
-            } else if (/koovee|tuto.?hockey|roki\b|mestis|jääkiekko/.test(t)) {
-              category = 'Urheilu'; subcategory = 'Jääkiekko';
-            } else if (/nyrkkeily|boxing/.test(t)) {
+
+            // Nyrkkeily
+            } else if (/nyrkkeily|boxing|nyrkkeil/.test(t)) {
               category = 'Urheilu'; subcategory = 'Nyrkkeily';
-            } else if (/urheilu|ottelu|turnaus|kilpailu|maraton|juoksu\b/.test(t) && !/teatteri|konsertti/.test(t)) {
+
+            // Muu urheilu
+            } else if (/\bottelu\b|turnaus|kilpailu|maraton|\bjuoksu\b|urheilu/.test(t) && !/teatteri|konsertti|musiik/.test(t)) {
               category = 'Urheilu'; subcategory = 'Urheilu';
-            // Musiikki - keikkapaikat automaattisesti Musiikkiin
+
+            // Musiikki - keikkapaikat automaattisesti Musiikkiin (mutta ei stand up tai urheilu)
             } else if (KEIKKAPAIKAT.test(location) || KEIKKAPAIKAT.test(nameLower)) {
               category = 'Musiikki'; subcategory = 'Musiikki';
-              // Tarkempi alagenre
               if (/rock|punk/.test(t)) subcategory = 'Rock';
               else if (/metal|heavy/.test(t)) subcategory = 'Heavy';
               else if (/jazz/.test(t)) subcategory = 'Jazz';
@@ -90,41 +114,27 @@ jobs:
               else if (/elektro|techno|dj\b/.test(t)) subcategory = 'Elektroninen';
               else if (/blues/.test(t)) subcategory = 'Blues';
               else if (/folk|kansanmusiik/.test(t)) subcategory = 'Folk';
-            } else if (/rock|punk/.test(t)) {
-              category = 'Musiikki'; subcategory = 'Rock';
-            } else if (/metal|heavy/.test(t)) {
-              category = 'Musiikki'; subcategory = 'Heavy';
-            } else if (/jazz/.test(t)) {
-              category = 'Musiikki'; subcategory = 'Jazz';
-            } else if (/klassi|sinfoni|orkesteri|filharmon/.test(t)) {
-              category = 'Musiikki'; subcategory = 'Klassinen';
-            } else if (/rap\b|hip.?hop/.test(t)) {
-              category = 'Musiikki'; subcategory = 'Rap';
-            } else if (/elektro|techno|dj\b|klubbi/.test(t)) {
-              category = 'Musiikki'; subcategory = 'Elektroninen';
-            } else if (/blues/.test(t)) {
-              category = 'Musiikki'; subcategory = 'Blues';
-            } else if (/folk|kansanmusiik/.test(t)) {
-              category = 'Musiikki'; subcategory = 'Folk';
-            } else if (/pop\b|iskelmä|schlager/.test(t)) {
-              category = 'Musiikki'; subcategory = 'Pop';
-            } else if (/konsertti|keikka|musiik|bändi|kuoro|yhtye|artisti/.test(t)) {
-              category = 'Musiikki'; subcategory = 'Musiikki';
+
+            // Musiikki - genret
+            } else if (/rock|punk/.test(t)) { category = 'Musiikki'; subcategory = 'Rock';
+            } else if (/metal|heavy/.test(t)) { category = 'Musiikki'; subcategory = 'Heavy';
+            } else if (/jazz/.test(t)) { category = 'Musiikki'; subcategory = 'Jazz';
+            } else if (/klassi|sinfoni|orkesteri|filharmon/.test(t)) { category = 'Musiikki'; subcategory = 'Klassinen';
+            } else if (/rap\b|hip.?hop/.test(t)) { category = 'Musiikki'; subcategory = 'Rap';
+            } else if (/elektro|techno|dj\b|klubbi/.test(t)) { category = 'Musiikki'; subcategory = 'Elektroninen';
+            } else if (/blues/.test(t)) { category = 'Musiikki'; subcategory = 'Blues';
+            } else if (/folk|kansanmusiik/.test(t)) { category = 'Musiikki'; subcategory = 'Folk';
+            } else if (/pop\b|iskelmä|schlager/.test(t)) { category = 'Musiikki'; subcategory = 'Pop';
+            } else if (/konsertti|keikka|musiik|bändi|kuoro|yhtye|artisti/.test(t)) { category = 'Musiikki'; subcategory = 'Musiikki';
+
             // Kulttuuri
-            } else if (/stand.?up|komedia|huumori/.test(t)) {
-              category = 'Kulttuuri'; subcategory = 'Komedia';
-            } else if (/teatteri|näytelmä|musikaali/.test(t)) {
-              category = 'Kulttuuri'; subcategory = 'Teatteri';
-            } else if (/ooppera|opera/.test(t)) {
-              category = 'Kulttuuri'; subcategory = 'Ooppera';
-            } else if (/tanssi|baletti/.test(t)) {
-              category = 'Kulttuuri'; subcategory = 'Tanssi';
-            } else if (/sirkus/.test(t)) {
-              category = 'Kulttuuri'; subcategory = 'Sirkus';
-            } else if (/näyttely|galleria|museo/.test(t)) {
-              category = 'Kulttuuri'; subcategory = 'Näyttely';
-            } else if (/lapset|perhe|family|kids|lasten/.test(t)) {
-              category = 'Lapset'; subcategory = 'Lapset';
+            } else if (/komedia|huumori/.test(t)) { category = 'Kulttuuri'; subcategory = 'Komedia';
+            } else if (/teatteri|näytelmä|musikaali/.test(t)) { category = 'Kulttuuri'; subcategory = 'Teatteri';
+            } else if (/ooppera|opera/.test(t)) { category = 'Kulttuuri'; subcategory = 'Ooppera';
+            } else if (/tanssi|baletti/.test(t)) { category = 'Kulttuuri'; subcategory = 'Tanssi';
+            } else if (/sirkus/.test(t)) { category = 'Kulttuuri'; subcategory = 'Sirkus';
+            } else if (/näyttely|galleria|museo/.test(t)) { category = 'Kulttuuri'; subcategory = 'Näyttely';
+            } else if (/lapset|perhe|family|kids|lasten/.test(t)) { category = 'Lapset'; subcategory = 'Lapset';
             }
 
             const key = short_name.substring(0, 60) + '_' + date;
