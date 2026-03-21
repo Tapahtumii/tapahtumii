@@ -3790,7 +3790,7 @@ const Tahtumii = () => {
         error
       } = await sb.from('events').select('id,title,city,category,subcategory,start_date,start_time,venue,price,ticket_url,event_url,image_url,source').gte('start_date', today).in('status', ['approved', 'auto_approved']).order('start_date', {
         ascending: true
-      }).limit(2000);
+      }).limit(3000);
       if (error) {
         console.warn('[Tapahtumii] DB virhe:', error.message);
         finishLoading(generateDemoEvents(), 'demo');
