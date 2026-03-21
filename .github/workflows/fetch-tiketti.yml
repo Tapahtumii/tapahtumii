@@ -29,7 +29,7 @@ jobs:
           let m;
 
           // Tunnettuja keikkapaikkoja - jos nimi tai paikka sisältää näitä, on keikka
-          const KEIKKAPAIKAT = /tavastia|semifinal|g.?livelab|korjaamo|ääniwalli|aaniwalli|nosturi|tavara.?asema|on.?the.?rocks|kulttuuritalo|logomo|telakka|turun.?konserttitalo|pakkahuone|klubi.?tampere|ratinan.?stadion|olympiastadion|hartwall/i;
+          const KEIKKAPAIKAT = /tavastia|semifinal|g.?livelab|korjaamo|ääniwalli|aaniwalli|nosturi|tavara.?asema|on.?the.?rocks|kulttuuritalo|logomo|telakka|turun.?konserttitalo|pakkahuone|klubi.?tampere|ratinan.?stadion|olympiastadion|hartwall|45.?special|bar.?ihku|rio.?live|riolive|teerenpeli|lutakko|tullikamari|olympia.tampere|z-one|henry.?s.?pub|rytmikorjaamo|klubi\b|semifinali/i;
 
           while ((m = eventRe.exec(xml)) !== null) {
             const ev = m[1];
@@ -70,8 +70,10 @@ jobs:
               category = 'Urheilu'; subcategory = 'Jääkiekko';
             } else if (/jalkapallo|veikkausliiga|hjk|futis/.test(t)) {
               category = 'Urheilu'; subcategory = 'Jalkapallo';
-            } else if (/koripallo|basket|koris|seagulls|pyrintö|vilpas|kataja.?basket|bisons|tapiolan.?honka|kouvot|kobrat|karhu.?basket/.test(t)) {
+            } else if (/koripallo|basket\b|koris\b|helsinki.?seagulls|tampereen.?pyrintö|salon.?vilpas|kataja.?basket|bisons.?loimaa|tapiolan.?honka|kouvot|kobrat|karhu.?basket|bc.?nokia/.test(t)) {
               category = 'Urheilu'; subcategory = 'Koripallo';
+            } else if (/koovee|tuto.?hockey|roki\b|mestis|jääkiekko/.test(t)) {
+              category = 'Urheilu'; subcategory = 'Jääkiekko';
             } else if (/nyrkkeily|boxing/.test(t)) {
               category = 'Urheilu'; subcategory = 'Nyrkkeily';
             } else if (/urheilu|ottelu|turnaus|kilpailu|maraton|juoksu\b/.test(t) && !/teatteri|konsertti/.test(t)) {
