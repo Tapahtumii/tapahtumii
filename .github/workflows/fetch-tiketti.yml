@@ -29,7 +29,7 @@ jobs:
           let m;
 
           // Tunnettuja keikkapaikkoja - jos nimi tai paikka sisältää näitä, on keikka
-          const KEIKKAPAIKAT = /tavastia|semifinal|g.?livelab|korjaamo|ääniwalli|aaniwalli|nosturi|tavara.?asema|on.?the.?rocks|kulttuuritalo|logomo|telakka|turun.?konserttitalo|pakkahuone|klubi.?tampere|ratinan.?stadion|olympiastadion|hartwall|45.?special|bar.?ihku|rio.?live|riolive|teerenpeli|lutakko|tullikamari|olympia.tampere|z-one|henry.?s.?pub|rytmikorjaamo|klubi\b|semifinali|kuudes.?linja|bar.?loose|botta\b|teatteri.?botta|studio51|juhlatila|konserttisali|musiikkitalo|finlandia.?talo|kulttuurisali|kulttuurikeskus|kaapelitehdas|kino.?laika|house.?of.?rock|kerubi\b|pakkahuone/i;
+          const KEIKKAPAIKAT = /tavastia|semifinal|g.?livelab|korjaamo|ääniwalli|aaniwalli|nosturi|tavara.?asema|on.?the.?rocks|kulttuuritalo|logomo|telakka|turun.?konserttitalo|hartwall|45.?special|bar.?ihku|rio.?live|riolive|teerenpeli|lutakko|tullikamari|z-one|henry.?s.?pub|rytmikorjaamo|kuudes.?linja|bar.?loose|\bbotta\b|kaapelitehdas|kino.?laika|house.?of.?rock|\bkerubi\b|pakkahuone|\bolympia\b|rymy.?eetu|varjobaari|asemaravintola.?semafori|klubi.?tampere|tampere.?klubi|semifinali|studio51|musiikkitalo|finlandia.?talo|olympiastadion|ratinan.?stadion/i;
 
           while ((m = eventRe.exec(xml)) !== null) {
             const ev = m[1];
