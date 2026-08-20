@@ -2120,24 +2120,31 @@ const Bubble = React.memo(({
   const sizeVar = numId % 4;
   const baseSize = 85 + sizeVar * 18;
 
-  // Vaaka-asema
-  const isMob = typeof window !== 'undefined' && window.innerWidth < 768;
-  const _raw = (numId * 31 + numId * 11 + numId * 67) % 100;
-  const _normalized = Math.sin((_raw / 100) * Math.PI);
-  const _jitter = ((numId * 17 + numId * 53) % 21) - 10;
-  let randomLeft;
-  if (isMob) {
-    // Mobiilissa: kolme vyöhykettä symmetrisesti
-    // Käytettävä leveys on ~72% (kalenteripalkki vie ~28% oikealta)
-    // Vasen: 5-28%, Keski: 29-50%, Oikea: 51-70%
-    const zone = numId % 3;
-    const zoneBase = zone === 0 ? 5 : zone === 1 ? 29 : 51;
-    const zoneWidth = 22; // jokainen vyöhyke ~22% leveä
-    const zoneJitter = ((numId * 41 + numId * 23) % zoneWidth);
-    randomLeft = Math.max(4, Math.min(70, zoneBase + zoneJitter));
-  } else {
-    randomLeft = Math.max(8, Math.min(72, 15 + Math.round(_normalized * 55) + _jitter));
-  }
+  // Vaaka-asema.
+  // Laskenta pikseleinä, koska prosentti ei huomioi kuplan omaa leveyttä
+  // -> isot kuplat valuivat aikataulupalkin päälle.
+  const TIMELINE_W = 56;   // aikataulupalkin leveys oikealla
+  const PAD_L = 12, PAD_R = 8, EDGE = 4;
+
+  // Sekoitushash -> tasainen 0..1 (pelkkä modulo kasautti kuplat)
+  const mix01 = n => {
+    let x = n | 0;
+    x = Math.imul(x ^ x >>> 16, 2246822507);
+    x = Math.imul(x ^ x >>> 13, 3266489909);
+    return ((x ^ x >>> 16) >>> 0) / 4294967296;
+  };
+
+  // Vuorotellaan puolelta toiselle, ettei synny pystyjonoa.
+  // Alueet menevät hieman päällekkäin keskellä, joten asettelu ei näytä kaavamaiselta.
+  const _base = mix01(numId * 2654435761);
+  const _side = animDelay % 2;
+  const posFrac = _side === 0 ? _base * 0.55 : 0.45 + _base * 0.55;
+
+  const availW = (typeof window !== 'undefined' ? window.innerWidth : 390) - TIMELINE_W - PAD_L - PAD_R;
+
+  // Kutistetulle kuplalle: reunasta reunaan, mutta kupla mahtuu aina kokonaan
+  const maxLeftCollapsed = Math.max(0, availW - baseSize - EDGE);
+  const leftCollapsed = Math.round(posFrac * maxLeftCollapsed);
 
   // Cap animation delay to avoid excessive stagger
   const cappedDelay = Math.min(animDelay, 15);
@@ -2193,14 +2200,11 @@ const Bubble = React.memo(({
     className: `bubble mb-3 ${!isExpanded && !hasAppeared.current ? 'bubble-appear' : ''}`,
     style: {
       marginLeft: (() => {
-        if (!isExpanded) return `${randomLeft}%`;
-        const timelineW = 56;
-        const padL = 12;
-        const availW = window.innerWidth - timelineW - padL;
-        const origLeft = randomLeft / 100 * availW;
-        const maxLeft = availW - expandedSize - 4;
-        const minLeft = 4;
-        return `${Math.max(minLeft, Math.min(maxLeft, origLeft))}px`;
+        if (!isExpanded) return `${leftCollapsed}px`;
+        // Laajennettuna: pidetään sama kohta, mutta rajataan niin että
+        // iso kupla mahtuu kokonaan aikataulupalkin vasemmalle puolelle
+        const maxLeft = Math.max(0, availW - expandedSize - EDGE);
+        return `${Math.round(Math.min(maxLeft, leftCollapsed))}px`;
       })(),
       animationDelay: !isExpanded ? `${cappedDelay * 0.04}s` : undefined,
       maxWidth: isExpanded ? `${expandedSize}px` : `${baseSize}px`,
