@@ -3667,7 +3667,7 @@ const Tahtumii = () => {
     const dt = Date.now() - swipeRef.current.time;
     // Must be horizontal, fast, and not too vertical
     if (Math.abs(dx) > 60 && Math.abs(dy) < Math.abs(dx) * 0.7 && dt < 400) {
-      const cats = selectedCity === 'Tampere' ? ['Kaikki', 'Musiikki', 'Urheilu'] : ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'];
+      const cats = selectedCity === 'Tampere' ? ['Kaikki', 'Musiikki', 'Urheilu'] : ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset', 'Muut'];
       const curIdx = cats.indexOf(selectedCategory);
       if (dx < 0 && curIdx < cats.length - 1) {
         setSelectedCategory(cats[curIdx + 1]);
@@ -3851,15 +3851,20 @@ const Tahtumii = () => {
   const cities = ['Helsinki', 'Tampere'];
   const categories = selectedCity === 'Tampere'
     ? ['Kaikki', 'Musiikki', 'Urheilu']
-    : ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'];
+    : ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset', 'Muut'];
   const getTodayString = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
+  // Helsingin kaupungin tapahtumasyote (linkedevents_hel) = paljon pienia tapahtumia.
+  // Ne nakyvat vain 'Lapset'- ja 'Muut'-valilehdilla, eivat muualla.
+  const isCityFeed = e => e.source === 'linkedevents_hel';
   const filteredEvents = useMemo(() => {
     return allEvents.filter(e => e.city === selectedCity).filter(e => {
-      if (selectedCategory === 'Kaikki') return e.category !== 'Lapset';
-      return e.category === selectedCategory;
+      if (selectedCategory === 'Kaikki') return e.category !== 'Lapset' && !isCityFeed(e);
+      if (selectedCategory === 'Muut') return isCityFeed(e) && e.category !== 'Lapset';
+      if (selectedCategory === 'Lapset') return e.category === 'Lapset';
+      return e.category === selectedCategory && !isCityFeed(e);
     }).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [allEvents, selectedCity, selectedCategory]);
   const calendarDays = useMemo(() => {
@@ -4330,7 +4335,7 @@ const Tahtumii = () => {
       zIndex: 30
     }
   }, /*#__PURE__*/React.createElement("nav", {
-    "aria-label": "Tapahtumatyypit: keikat, urheilu, kulttuuri, lapset",
+    "aria-label": "Tapahtumatyypit: keikat, urheilu, kulttuuri, lapset, muut",
     style: {
       borderBottom: '1px solid rgba(255,255,255,0.04)',
       position: 'relative'
@@ -4461,7 +4466,7 @@ const Tahtumii = () => {
       e.preventDefault();
       setSelectedCity(city);
       // Jos ollaan Kulttuuri tai Lapset -tabilla ja vaihdetaan Tampereeseen, reset Kaikki
-      if (city === 'Tampere' && (selectedCategory === 'Kulttuuri' || selectedCategory === 'Lapset')) {
+      if (city === 'Tampere' && ['Kulttuuri', 'Lapset', 'Muut'].includes(selectedCategory)) {
         setSelectedCategory('Kaikki');
       }
       scrollToCenter(cityScrollRef, idx);
