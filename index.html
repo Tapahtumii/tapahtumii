@@ -12,8 +12,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tapahtumat">
     <title>Tapahtumat Helsinki & Tampere — keikat, urheilu, jääkiekko | Tapahtumii</title>
-    <meta name="description" content="Löydä tapahtumat Helsingissä ja Tampereella. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja kulttuuri — kaikki yhdessä paikassa. Tapahtumii.com" />
-    <meta name="keywords" content="tapahtumat helsinki, tapahtumat tampere, keikat helsinki, keikat tampere, jääkiekko helsinki, jääkiekko tampere, konsertit, SM-liiga, Mestis, musiikki, urheilu, teatteri, Tavastia, G Livelab, Tavara-asema" />
+    <meta name="description" content="Löydä tapahtumat Helsingissä ja Tampereella. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja lastentapahtumat — kaikki yhdessä paikassa. Tapahtumii.com" />
+    <meta name="keywords" content="tapahtumat helsinki, tapahtumat tampere, keikat helsinki, keikat tampere, jääkiekko helsinki, jääkiekko tampere, konsertit, SM-liiga, Mestis, musiikki, urheilu, lastentapahtumat, Tavastia, G Livelab, Tavara-asema" />
     <meta property="og:title" content="Tapahtumat Helsinki & Tampere — keikat, urheilu, jääkiekko | Tapahtumii" />
     <meta property="og:description" content="Löydä kaikki tapahtumat yhdestä paikasta. Keikat, konsertit, jääkiekko ja urheilu Helsingissä ja Tampereella." />
     <meta property="og:type" content="website" />
@@ -30,7 +30,7 @@
         "name": "Tapahtumii",
         "url": "https://tapahtumii.com",
         "alternateName": ["Tapahtumii.fi", "Tapahtumat Helsinki", "Tapahtumat Tampere"],
-        "description": "Löydä tapahtumat Helsingissä ja Tampereella — keikat, konsertit, jääkiekko, urheilu ja kulttuuri.",
+        "description": "Löydä tapahtumat Helsingissä ja Tampereella — keikat, konsertit, jääkiekko, urheilu ja lastentapahtumat.",
         "potentialAction": {
             "@type": "SearchAction",
             "target": "https://tapahtumii.com/?q={search_term_string}",
@@ -362,7 +362,7 @@
             <h2>Kaupungit</h2>
             <ul><li><a href="https://tapahtumathelsinki.com">Tapahtumat Helsinki</a></li><li><a href="https://tapahtumattampere.com">Tapahtumat Tampere</a></li></ul>
             <h2>Kategoriat</h2>
-            <ul><li>Keikat — keikat, konsertit, jazz, rock, pop, heavy, elektroninen</li><li>Urheilu — jääkiekko, SM-liiga, Mestis, jalkapallo, koripallo, nyrkkeily</li><li>Kulttuuri — teatteri, ooppera, tanssi, komedia, stand-up, näyttelyt</li></ul>
+            <ul><li>Keikat — keikat, konsertit, jazz, rock, pop, heavy, elektroninen</li><li>Urheilu — jääkiekko, SM-liiga, Mestis, jalkapallo, koripallo, nyrkkeily</li><li>Kulttuuri — teatteri, ooppera, tanssi, komedia, stand-up, näyttelyt</li><li>Lapset — lastentapahtumat, perhetapahtumat</li></ul>
         </nav>
     </noscript>
 
@@ -2970,7 +2970,7 @@ const AddEventModal = ({
       subcategory: ''
     }),
     style: selectStyle
-  }, ['Musiikki', 'Urheilu', 'Kulttuuri'].map(c => /*#__PURE__*/React.createElement("option", {
+  }, ['Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'].map(c => /*#__PURE__*/React.createElement("option", {
     key: c,
     value: c,
     style: {
@@ -3395,7 +3395,7 @@ const AdminPanel = ({
       ...inputStyle,
       flex: 1
     }
-  }, ['Musiikki', 'Urheilu', 'Kulttuuri'].map(c => /*#__PURE__*/React.createElement("option", {
+  }, ['Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'].map(c => /*#__PURE__*/React.createElement("option", {
     key: c,
     value: c
   }, c))), /*#__PURE__*/React.createElement("input", {
@@ -3617,7 +3617,7 @@ const Tahtumii = () => {
     const cityName = selectedCity;
     document.title = `Tapahtumat ${cityName} — keikat, konsertit, urheilu | Tapahtumii`;
     const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content', `Löydä tapahtumat ${cityName === 'Helsinki' ? 'Helsingissä' : 'Tampereella'}. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja kulttuuri — kaikki yhdessä paikassa.`);
+    if (metaDesc) metaDesc.setAttribute('content', `Löydä tapahtumat ${cityName === 'Helsinki' ? 'Helsingissä' : 'Tampereella'}. Keikat, konsertit, jääkiekko, SM-liiga, urheilu ja lastentapahtumat — kaikki yhdessä paikassa.`);
   }, [selectedCity]);
   const [selectedCategory, setSelectedCategory] = useState('Kaikki');
   const [expandedEvent, setExpandedEvent] = useState(null);
@@ -3667,7 +3667,7 @@ const Tahtumii = () => {
     const dt = Date.now() - swipeRef.current.time;
     // Must be horizontal, fast, and not too vertical
     if (Math.abs(dx) > 60 && Math.abs(dy) < Math.abs(dx) * 0.7 && dt < 400) {
-      const cats = selectedCity === 'Tampere' ? ['Kaikki', 'Musiikki', 'Urheilu'] : ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri'];
+      const cats = selectedCity === 'Tampere' ? ['Kaikki', 'Musiikki', 'Urheilu'] : ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'];
       const curIdx = cats.indexOf(selectedCategory);
       if (dx < 0 && curIdx < cats.length - 1) {
         setSelectedCategory(cats[curIdx + 1]);
@@ -3841,7 +3841,7 @@ const Tahtumii = () => {
   const cities = ['Helsinki', 'Tampere'];
   const categories = selectedCity === 'Tampere'
     ? ['Kaikki', 'Musiikki', 'Urheilu']
-    : ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri'];
+    : ['Kaikki', 'Musiikki', 'Urheilu', 'Kulttuuri', 'Lapset'];
   const getTodayString = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -4320,7 +4320,7 @@ const Tahtumii = () => {
       zIndex: 30
     }
   }, /*#__PURE__*/React.createElement("nav", {
-    "aria-label": "Tapahtumatyypit: keikat, urheilu, kulttuuri",
+    "aria-label": "Tapahtumatyypit: keikat, urheilu, kulttuuri, lapset",
     style: {
       borderBottom: '1px solid rgba(255,255,255,0.04)',
       position: 'relative'
@@ -4450,8 +4450,8 @@ const Tahtumii = () => {
     onClick: e => {
       e.preventDefault();
       setSelectedCity(city);
-      // Jos ollaan Kulttuuri-tabilla ja vaihdetaan Tampereeseen, reset Kaikki
-      if (city === 'Tampere' && selectedCategory === 'Kulttuuri') {
+      // Jos ollaan Kulttuuri tai Lapset -tabilla ja vaihdetaan Tampereeseen, reset Kaikki
+      if (city === 'Tampere' && (selectedCategory === 'Kulttuuri' || selectedCategory === 'Lapset')) {
         setSelectedCategory('Kaikki');
       }
       scrollToCenter(cityScrollRef, idx);
