@@ -3783,15 +3783,25 @@ const Tahtumii = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       console.log('[Tapahtumii] Haetaan DB-tapahtumat...');
-      // Supabase rajoittaa 1000 riviin per haku — haetaan kahdessa erässä
+      // Supabase rajoittaa 1000 riviin per haku — haetaan erissä kunnes kaikki on haettu
       const SELECT = 'id,title,city,category,subcategory,start_date,start_time,venue,price,ticket_url,event_url,image_url,source';
-      const base = sb.from('events');
-      const [r1, r2] = await Promise.all([
-        base.select(SELECT).gte('start_date', today).in('status', ['approved','auto_approved']).order('start_date', {ascending: true}).range(0, 999),
-        base.select(SELECT).gte('start_date', today).in('status', ['approved','auto_approved']).order('start_date', {ascending: true}).range(1000, 1999),
-      ]);
-      const error = r1.error || r2.error;
-      const data = [...(r1.data || []), ...(r2.data || [])];
+      const PAGE = 1000;
+      const MAX_PAGES = 12; // turvaraja: enintään 12 000 tapahtumaa
+      const data = [];
+      let error = null;
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const res = await sb.from('events')
+          .select(SELECT)
+          .gte('start_date', today)
+          .in('status', ['approved', 'auto_approved'])
+          .order('start_date', { ascending: true })
+          .range(page * PAGE, page * PAGE + PAGE - 1);
+        if (res.error) { error = res.error; break; }
+        const rows = res.data || [];
+        data.push(...rows);
+        if (rows.length < PAGE) break; // viimeinen erä
+      }
+      console.log(`[Tapahtumii] Haettu ${data.length} riviä kannasta`);
       if (error) {
         console.warn('[Tapahtumii] DB virhe:', error.message);
         finishLoading(generateDemoEvents(), 'demo');
